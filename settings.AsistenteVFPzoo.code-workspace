@@ -1,24 +1,8 @@
 {
 	"folders": [
 		{
-			"name": "🤖 ZL",
+			"name": "🧙 Asistente vfp",
 			"path": "."
-		},
-		{
-			"name": "🐯 Feline",
-			"path": "../Organic.Feline"
-		},
-		{
-			"name": "⚙️ Core",
-			"path": "../Organic.Core"
-		},
-		{
-			"name": "🎨 Drawing",
-			"path": "../Organic.Drawing"
-		},
-		{
-			"name": "⚡ Generator",
-			"path": "../Organic.Generator"
 		}
 	],
 	"settings": {
