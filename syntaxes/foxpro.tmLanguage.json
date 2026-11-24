@@ -1,0 +1,94 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Visual FoxPro (Asistente VFP)",
+  "scopeName": "source.foxpro.asistente",
+  "patterns": [
+    { "include": "#note" },
+    { "include": "#lineComment" },
+    { "include": "#inlineComment" },
+    { "include": "#strings" },
+    { "include": "#declarations" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "note": {
+      "name": "comment.block.documentation.note.foxpro",
+      "begin": "(?i)^\s*(note)\b(?:\s*(\[[^\]]+\]))?",
+      "beginCaptures": {
+        "1": { "name": "keyword.other.documentation.note.foxpro" },
+        "2": { "name": "storage.type.class.documentation.category.foxpro" }
+      },
+      "end": "(?<!;)\s*$",
+      "patterns": [
+        { "match": "(?i)\b(par[aá]metros|retorna|ejemplo)\s*:", "name": "keyword.other.documentation.section.foxpro" },
+        { "match": "^\s*(\w+)\s+(-)\s", "captures": { "1": { "name": "variable.parameter.foxpro" } } }
+      ]
+    },
+    "lineComment": {
+      "name": "comment.line.foxpro",
+      "begin": "^\s*(\*|(?i:rem\b))",
+      "end": "(?<!;)\s*$"
+    },
+    "inlineComment": {
+      "name": "comment.line.double-ampersand.foxpro",
+      "match": "&&.*$"
+    },
+    "strings": {
+      "patterns": [
+        { "name": "string.quoted.double.foxpro", "match": "\"[^\"]*\"?" },
+        { "name": "string.quoted.single.foxpro", "match": "'[^']*'?" }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "(?i)^\s*(define\s+class)\s+(\w+)\s+(as)\s+([\w.]+)(?:\s+(of)\s+(\S+))?",
+          "captures": {
+            "1": { "name": "storage.type.class.foxpro" },
+            "2": { "name": "entity.name.type.class.foxpro" },
+            "3": { "name": "keyword.other.foxpro" },
+            "4": { "name": "entity.other.inherited-class.foxpro" },
+            "5": { "name": "keyword.other.foxpro" },
+            "6": { "name": "string.unquoted.library.foxpro" }
+          }
+        },
+        {
+          "match": "(?i)^\s*(?:(protected|hidden)\s+)?(function|procedure|func|proc)\s+([\w.]+)",
+          "captures": {
+            "1": { "name": "storage.modifier.foxpro" },
+            "2": { "name": "storage.type.function.foxpro" },
+            "3": { "name": "entity.name.function.foxpro" }
+          }
+        },
+        {
+          "match": "(?i)\b(as)\s+(\w+)",
+          "captures": { "1": { "name": "keyword.other.foxpro" }, "2": { "name": "entity.name.type.foxpro" } }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.foxpro",
+          "match": "(?i)\b(if|else|endif|do\s+case|case|otherwise|endcase|for|each|endfor|next|do\s+while|enddo|scan|endscan|try|catch|finally|endtry|throw|return|exit|loop|with|endwith|enddefine|endfunc|endproc|text|endtext|in|to|step)\b"
+        },
+        {
+          "name": "keyword.other.foxpro",
+          "match": "(?i)\b(local|lparameters|parameters|public|private|dimension|declare|add\s+object|of|olepublic|this|thisform|thisformset|dodefault|nodefault)\b"
+        },
+        { "name": "keyword.operator.logical.foxpro", "match": "(?i)\b(and|or|not)\b|!" },
+        { "name": "meta.preprocessor.foxpro", "match": "(?i)^\s*#\w+" }
+      ]
+    },
+    "constants": {
+      "name": "constant.language.foxpro",
+      "match": "(?i)\.(t|f|null|y|n)\.|\bnull\b"
+    },
+    "numbers": {
+      "name": "constant.numeric.foxpro",
+      "match": "\b\d+(\.\d+)?\b"
+    }
+  }
+}

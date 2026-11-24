@@ -1,0 +1,9 @@
+<Project>
+	<ItemGroup>
+		<AppReference Include="Organic.AdnImplant.app" />
+		<AppReference Include="Organic.Core.app" />
+		<AppReference Include="Organic.Drawing.app" />
+		<AppReference Include="Organic.Generator.app" />
+		<AppReference Include="Organic.Feline.app" />
+	</ItemGroup>
+</Project>

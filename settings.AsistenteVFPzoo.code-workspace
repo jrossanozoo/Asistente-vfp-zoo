@@ -1,0 +1,216 @@
+{
+	"folders": [
+		{
+			"name": "🤖 ZL",
+			"path": "."
+		},
+		{
+			"name": "🐯 Feline",
+			"path": "../Organic.Feline"
+		},
+		{
+			"name": "⚙️ Core",
+			"path": "../Organic.Core"
+		},
+		{
+			"name": "🎨 Drawing",
+			"path": "../Organic.Drawing"
+		},
+		{
+			"name": "⚡ Generator",
+			"path": "../Organic.Generator"
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "GitHub Dark Default",
+		"workbench.colorCustomizations": {
+			"focusBorder": "#4E8C93",
+			"activityBar.background": "#134950",
+			"activityBar.foreground": "#FFFFFF",
+			"activityBar.border": "#0D3338",
+			"activityBar.activeBorder": "#4E8C93",
+			"activityBarBadge.background": "#1C6B75",
+			"activityBarBadge.foreground": "#FFFFFF",
+			"titleBar.activeBackground": "#134950",
+			"titleBar.activeForeground": "#FFFFFF",
+			"titleBar.inactiveBackground": "#0D3338",
+			"titleBar.inactiveForeground": "#72A3A9",
+			"titleBar.border": "#0D3338",
+			"statusBar.background": "#1C6B75",
+			"statusBar.foreground": "#FFFFFF",
+			"statusBar.border": "#4E8C93",
+			"statusBar.noFolderBackground": "#134950",
+			"statusBar.noFolderForeground": "#FFFFFF",
+			"statusBarItem.hoverBackground": "#4E8C9333",
+			"menubar.selectionBackground": "#1C6B7533",
+			"menubar.selectionForeground": "#FFFFFF",
+			"menu.selectionBackground": "#1C6B7533",
+			"menu.selectionForeground": "#FFFFFF",
+			"menu.border": "#0D3338",
+			"commandCenter.activeBackground": "#1C6B7530",
+			"commandCenter.activeForeground": "#FFFFFF",
+			"notificationCenterHeader.background": "#134950",
+			"notificationCenterHeader.foreground": "#FFFFFF",
+			"notifications.background": "#131F21",
+			"notifications.foreground": "#FFFFFF",
+			"notifications.border": "#1C6B75",
+			"panel.border": "#0D3338",
+			"sideBar.border": "#0D3338",
+			"editorGroup.border": "#0D3338",
+			"pickerGroup.border": "#1C6B75",
+			"inputOption.activeBorder": "#4E8C93",
+			"badge.background": "#1C6B75",
+			"badge.foreground": "#FFFFFF",
+			"progressBar.background": "#4E8C93",
+			"toolbar.hoverBackground": "#1C6B7522",
+			"toolbar.activeBackground": "#1C6B7533",
+			"diffEditor.removedLineBackground": "#E1C2FF1F",
+			"diffEditor.removedTextBackground": "#E1C2FF44",
+			"diffEditorGutter.removedLineBackground": "#E1C2FF66",
+			"diffEditor.insertedLineBackground": "#EDFFC21F",
+			"diffEditor.insertedTextBackground": "#EDFFC244",
+			"diffEditorGutter.insertedLineBackground": "#EDFFC266"
+		},
+		"editor.tokenColorCustomizations": {
+			"textMateRules": [
+				{
+					"name": "Language syntax",
+					"scope": [
+						"keyword",
+						"keyword.control",
+						"keyword.operator.expression",
+						"keyword.operator.new",
+						"keyword.operator.word",
+						"storage",
+						"storage.type",
+						"storage.modifier"
+					],
+					"settings": {
+						"foreground": "#7EFCFC"
+					}
+				},
+				{
+					"name": "Literal values",
+					"scope": [
+						"string",
+						"string.quoted",
+						"constant.numeric",
+						"constant.language",
+						"constant.character",
+						"constant.escape"
+					],
+					"settings": {
+						"foreground": "#99FC7E"
+					}
+				},
+				{
+					"name": "Links (Markdown + source)",
+					"scope": [
+						"string.other.link.title.markdown",
+						"meta.link.reference.markdown",
+						"meta.link.reference.def.markdown",
+						"meta.link.inline.markdown",
+						"markup.underline.link.markdown",
+						"markup.underline.link.image.markdown",
+						"markup.underline.link",
+						"string.other.link"
+					],
+					"settings": {
+						"foreground": "#C2CDFF"
+					}
+				},
+				{
+					"name": "Comments",
+					"scope": [
+						"comment",
+						"comment.line",
+						"comment.block",
+						"comment.block.documentation",
+						"comment.block.html"
+					],
+					"settings": {
+						"foreground": "#FFE1C2"
+					}
+				}
+			]
+		},
+		"editor.semanticTokenColorCustomizations": {
+			"enabled": true,
+			"rules": {
+				"keyword": "#7EFCFC",
+				"string": "#99FC7E",
+				"number": "#99FC7E",
+				"comment": "#FFE1C2"
+			}
+		},
+		"terminal.integrated.enablePersistentSessions": false,
+		"explorer.autoReveal": false,
+		"explorer.compactFolders": true,
+		"window.restoreWindows": "none",
+		"workbench.startupEditor": "none",
+		//"telemetry.feedback.enabled": false,
+		"telemetry.telemetryLevel": "off",
+
+		// "telemetry.telemetryLevel": "off",
+
+		"files.watcherExclude": {
+			"**/.git/objects/**": true,
+			"**/.git/subtree-cache/**": true,
+			"**/bin/**": true,
+			"**/obj/**": true,
+			"**/packages/**": true,
+			"**/.legacy-tests-build": true,
+			"**/TestResults/**": true,
+			"**/Organic.Generated/generados/**": true,
+			"**/*.dbf": true,
+			"**/*.fpt": true,
+			"**/*.cdx": true
+		},
+
+		"search.exclude": {
+			"**/bin/**": true,
+			"**/obj/**": true,
+			"**/packages/**": true,
+			"**/.legacy-tests-build": true,
+			"**/TestResults/**": true,
+			"**/Organic.Generated/generados/**": true
+		},
+
+		"files.exclude": {
+			"**/bin": true,
+			"**/obj": true,
+			"**/packages": true,
+			"**/.legacy-tests-build": true
+		},
+
+		"editor.insertSpaces": false,
+		"editor.tabSize": 4,
+		"editor.detectIndentation": false,
+
+		"git.autofetch": false,
+		"editor.minimap.enabled": false,
+		"editor.codeLens": false,
+		"editor.inlayHints.enabled": "offUnlessPressed",
+		"terminal.integrated.environmentChangesRelaunch": false,
+		"terminal.integrated.hideOnStartup": "always",
+
+		// ============================================================
+		// CLAUDE CODE - Configuración del panel de chat
+		// ============================================================
+		"claudecode.preferredLocation": "sidebar",
+
+		// ============================================================
+		// ZOO TOOL KIT - Extensión para Visual FoxPro
+		// ============================================================
+		"zoo-tool-kit.test.testTimeout": 600,
+		"zoo-tool-kit.test.testExecutionTimeout": 60000,
+		"zoo-tool-kit.test.testDiscoveryTimeout": 360,
+		"zoo-tool-kit.test.testParallelism": 3,
+		"zoo-tool-kit.test.groupBy": "folder",
+		"zoo-tool-kit.showExtensionRecommendations": false,
+		"zoo-tool-kit.test.vfpInitTimeout": 180,
+		"zoo-tool-kit.test.vfpCreateTimeout": 30,
+		"zoo-tool-kit.test.vfpCreateAttempts": 2,
+		"zoo-tool-kit.test.testMethodAttempts": 2
+	}
+}

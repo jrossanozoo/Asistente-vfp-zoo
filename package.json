@@ -1,0 +1,269 @@
+{
+  "name": "asistente-vfp-zoo",
+  "displayName": "Asistente VFP Zoo",
+  "description": "Navegación semántica y ayuda contextual para Visual FoxPro Organic: productos, fábricas, multi-repo (.symbols, stubs), VCX y docstrings NOTE.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "vfp",
+    "foxpro",
+    "organic",
+    "zoologic",
+    "docstring"
+  ],
+  "activationEvents": [
+    "onLanguage:foxpro",
+    "workspaceContains:**/*.vfpsln",
+    "workspaceContains:**/*.prg",
+    "onFileSystem:foxpro-vcx"
+  ],
+  "main": "./dist/client.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "foxpro",
+        "aliases": [
+          "Visual FoxPro",
+          "VFP",
+          "FoxPro"
+        ],
+        "extensions": [
+          ".prg",
+          ".PRG"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "foxpro",
+        "scopeName": "source.foxpro.asistente",
+        "path": "./syntaxes/foxpro.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "foxpro",
+        "path": "./snippets/foxpro.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "asistenteVfpZoo.reindex",
+        "title": "Zoo VFP: Reindexar workspace"
+      },
+      {
+        "command": "asistenteVfpZoo.selectProduct",
+        "title": "Zoo VFP: Elegir producto"
+      },
+      {
+        "command": "asistenteVfpZoo.status",
+        "title": "Zoo VFP: Mostrar estado del índice"
+      },
+      {
+        "command": "asistenteVfpZoo.mcpConfig",
+        "title": "Zoo VFP: Copiar configuración del servidor MCP"
+      }
+    ],
+    "configuration": {
+      "title": "Asistente VFP Zoo",
+      "properties": {
+        "zoo.producto": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "markdownDescription": "Producto activo (`cProyecto`): `\"\"` (Core/Drawing/Generator), `FELINO`, `ColoryTalle` o `ZL`. Si es `null` se detecta de la clase `Aplicacion*` del workspace."
+        },
+        "zoo.productos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "",
+            "FELINO",
+            "ColoryTalle",
+            "ZL"
+          ],
+          "description": "Productos conocidos (para la tabla de resolución por producto del hover)."
+        },
+        "zoo.sourceRoots": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "markdownDescription": "Fuentes hermanas por `.app` referenciado, por ejemplo `{ \"Organic.Core\": \"../Organic.Core\" }`. Rutas relativas a la carpeta del workspace."
+        },
+        "zoo.autoSourceRoots": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Si un `.app` referenciado no está en `zoo.sourceRoots`, buscar sus fuentes en `../Organic.X`."
+        },
+        "zoo.downstreamRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Repos que consumen este código (por ejemplo `../Organic.Dragonfish`). Solo para *Implementation*, *References*, *Type Hierarchy*, CodeLens y la tabla por producto; nunca para resolver tipos."
+        },
+        "zoo.indexGenerated": {
+          "type": "string",
+          "enum": [
+            "none",
+            "headers",
+            "full"
+          ],
+          "default": "headers",
+          "markdownDescription": "Cómo indexar `Organic.Generated`: `none` (solo por nombre de archivo, bajo demanda), `headers` (`define class` / `function`), `full`."
+        },
+        "zoo.factories": {
+          "type": "array",
+          "default": [],
+          "markdownDescription": "Reglas de fábrica adicionales o que reemplazan a las embebidas. Ejemplo: `{ \"method\": \"InstanciarEntidad\", \"arg\": 0, \"candidates\": [\"Ent{P}_{X}\", \"Ent_{X}\", \"Din_Entidad{X}\"] }`."
+        },
+        "zoo.symbols.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Leer los `.symbols` de los `.app` referenciados (capa T3)."
+        },
+        "zoo.stubs.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Indexar los stubs de dovfp `obj/*/_dovfp_stubs` (capa T4)."
+        },
+        "zoo.vcx.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Indexar clases visuales (.vcx) de las fuentes."
+        },
+        "zoo.codeLens.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mostrar CodeLens de subclases, overrides y resolución por fábrica."
+        },
+        "zoo.references.includeGenerated": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Buscar referencias también en `Organic.Generated` (más lento)."
+        },
+        "zoo.references.includeHeuristic": {
+          "type": "boolean",
+          "default": true,
+          "description": "Incluir referencias heurísticas (receptor de tipo desconocido, por nombre)."
+        },
+        "zoo.note.categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Dependencia",
+            "Extension",
+            "Generacion",
+            "Contrato",
+            "Gotcha",
+            "Obsoleto"
+          ],
+          "markdownDescription": "Categorías válidas de `NOTE`."
+        },
+        "zoo.note.requireCategory": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "N1: advertir si un `NOTE` no empieza con una `[Categoría]` conocida."
+        },
+        "zoo.note.requireOnPublicMethods": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "N6: avisar en métodos públicos de clases base sin `NOTE`."
+        },
+        "zoo.note.checkAscii": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "N5: avisar si el `NOTE` tiene caracteres fuera de ASCII."
+        },
+        "zoo.diagnostics.unreachableProductClass": {
+          "type": "boolean",
+          "default": true,
+          "description": "D3: clase de producto que ninguna fábrica por producto alcanza."
+        },
+        "zoo.diagnostics.factoryLiteral": {
+          "type": "boolean",
+          "default": true,
+          "description": "D4: literal de fábrica sin ninguna clase candidata."
+        },
+        "zoo.diagnostics.ofLib": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "D5: `OF lib.prg` que no coincide con el archivo real de la clase padre."
+        },
+        "zoo.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/bin/**",
+            "**/obj/**"
+          ],
+          "description": "Globs que no se indexan."
+        },
+        "zoo.index.maxFileSizeKB": {
+          "type": "number",
+          "default": 512,
+          "description": "Archivos más grandes se indexan solo por encabezados."
+        },
+        "zoo.docstring.fallbackComments": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Si un método no tiene `NOTE`, mostrar los comentarios `*` / `&&` de encima."
+        },
+        "zoo.features.documentSymbols": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Proveer el Outline (apagarlo si zoo-tool-kit ya lo provee)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "services-table": "node esbuild.mjs --tools && node dist/tools/servicesTable.js",
+    "package": "npm run typecheck && npm run build -- --production && vsce package --no-dependencies --allow-missing-repository"
+  },
+  "dependencies": {
+    "fast-glob": "3.3.2",
+    "iconv-lite": "0.6.3",
+    "picomatch": "2.3.1",
+    "vscode-languageclient": "9.0.1",
+    "vscode-languageserver": "9.0.1",
+    "vscode-languageserver-textdocument": "1.0.12",
+    "vscode-languageserver-types": "3.17.5",
+    "vscode-uri": "3.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.6",
+    "@types/picomatch": "2.3.4",
+    "@types/vscode": "1.88.0",
+    "@vscode/vsce": "3.2.1",
+    "esbuild": "0.24.0",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}
