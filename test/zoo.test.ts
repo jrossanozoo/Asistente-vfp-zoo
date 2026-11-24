@@ -101,6 +101,32 @@ describe('fábricas (F1/F4)', () => {
     expect(md).toContain('| ZL | `ZL_ColaboradorListaDinamica` |');
   });
 
+  it('Drawing: variable asignada desde un método tipado → F12 a la clase y hover con métodos', () => {
+    const ctx = ctxAt(drawing, 'Organic.Drawing/Organic.BusinessLogic/CENTRALSS/Dibujante/_Base/ComboListaDinamica.prg', 'loColaborador.ObtenerColeccion( tcEntidad', 2);
+    const target = drawing.resolver.resolveAt(ctx)!;
+    expect(target.kind).toBe('variable');
+    expect(path.basename(definitionWithLocals(target, ctx)[0].uri)).toBe('ColaboradorListaDinamica.prg');
+    const md = hoverMarkdown(drawing.index, target)!;
+    expect(md).toContain('define class ColaboradorListaDinamica');
+    expect(md).toMatch(/\*\*Métodos\*\*[\s\S]*ObtenerColeccion\(/);
+  });
+
+  it('Dragonfish: variable sin tipo creada con CrearObjeto → F12/hover a la clase (en el lado izquierdo y en usos posteriores)', () => {
+    const rel = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/Ventas/entcolorytalle_comprobantedecaja.PRG';
+    const lhs = ctxAt(dragon, rel, 'loColaborador = _screen', 2);
+    const t1 = dragon.resolver.resolveAt(lhs)!;
+    expect(t1.kind).toBe('variable');
+    expect(definitionWithLocals(t1, lhs).map((l) => path.basename(l.uri).toLowerCase())).toContain('colaboradorcheques.prg');
+    const md = hoverMarkdown(dragon.index, t1)!;
+    expect(md).toContain('→ ColaboradorCheques');
+    expect(md).toContain('CrearObjeto("ColaboradorCheques")');
+
+    const text = readPrgSync(abs(rel)).replace(/(CrearObjeto\( "ColaboradorCheques" \))/, '$1\r\n\t\tloColaborador.Release()');
+    const use = ctxAt(dragon, rel, 'loColaborador.Release', 2, text);
+    const t2 = dragon.resolver.resolveAt(use)!;
+    expect(definitionWithLocals(t2, use).map((l) => path.basename(l.uri).toLowerCase())).toContain('colaboradorcheques.prg');
+  });
+
   it('Feline: InstanciarComponente("ComponenteCajero") → ComponenteCajero y su padre generado', () => {
     const ctx = ctxAt(feline, 'Organic.Feline/Organic.BusinessLogic/CENTRALSS/Felino/Ventas/Uso.prg', '"ComponenteCajero"', 2);
     const target = feline.resolver.resolveAt(ctx)!;

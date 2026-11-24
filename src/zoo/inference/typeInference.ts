@@ -82,16 +82,21 @@ export class ZooTypeResolver implements TypeResolver {
     return undefined;
   }
 
-  /** Última asignación `name = …` antes del cursor dentro del método actual. */
+  /**
+   * Última asignación `name = …` antes del cursor dentro del método actual.
+   * Incluye la línea del cursor si está parado en el lado izquierdo (`loX| = CrearObjeto(…)`).
+   */
   private assignedVar(name: string, ctx: CursorContext, api: HostApi): TypeResult | undefined {
     if (!ctx.member) return undefined;
     const re = new RegExp(`^\\s*(?:m\\.)?${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=(?!=)(.*)$`, 'i');
     const start = ctx.member.range.start.line;
-    for (let line = Math.min(ctx.position.line - 1, ctx.lines.length - 1); line > start; line--) {
+    for (let line = Math.min(ctx.position.line, ctx.lines.length - 1); line > start; line--) {
       const s = ctx.scanned[line];
       if (s.isComment || s.isText) continue;
       const m = re.exec(s.code);
-      if (m) return this.rhsType(m[1], ctx, api);
+      if (!m) continue;
+      if (line === ctx.position.line && ctx.position.character > m[0].length - m[1].length - 1) continue;
+      return this.rhsType(m[1], ctx, api);
     }
     return undefined;
   }
