@@ -1,0 +1,192 @@
+{
+  "source": "embedded",
+  "services": [
+    {
+      "prop": "PrecisionDecimalEnCantidad",
+      "method": "Crearobjeto",
+      "x": "ColaboradorDecimalesEnCantidad"
+    },
+    {
+      "prop": "RealTime",
+      "method": "CrearObjetoPorProducto",
+      "x": "tiemporeal"
+    },
+    {
+      "prop": "MercadoPago",
+      "method": "CrearObjetoPorProducto",
+      "x": "ManagerMercadoPago"
+    },
+    {
+      "prop": "Clover",
+      "method": "CrearObjetoPorProducto",
+      "x": "ManagerClover"
+    },
+    {
+      "prop": "HubEcommerce",
+      "method": "CrearObjetoPorProducto",
+      "x": "ManagerHubEcommerce"
+    },
+    {
+      "prop": "Ejecucion",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerEjecucion"
+    },
+    {
+      "prop": "Entidades",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerEntidades"
+    },
+    {
+      "prop": "Librerias",
+      "method": "CrearObjetoServicios",
+      "x": "Librerias"
+    },
+    {
+      "prop": "Errores",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerErrores"
+    },
+    {
+      "prop": "Multimedia",
+      "method": "CrearObjetoServicios",
+      "x": "Multimedia"
+    },
+    {
+      "prop": "Importaciones",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerImportaciones"
+    },
+    {
+      "prop": "Listados",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerListados"
+    },
+    {
+      "prop": "Memoria",
+      "method": "CrearObjetoServicios",
+      "x": "Memoria"
+    },
+    {
+      "prop": "Impresion",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerImpresion"
+    },
+    {
+      "prop": "Seguridad",
+      "method": "CrearObjetoServicios",
+      "x": "Seguridad"
+    },
+    {
+      "prop": "Logueos",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerLogueos"
+    },
+    {
+      "prop": "SerializadorDeEntidades",
+      "method": "CrearObjetoServicios",
+      "x": "SerializadorDeEntidades"
+    },
+    {
+      "prop": "Mensajes",
+      "method": "CrearObjetoServicios",
+      "x": "Mensajes"
+    },
+    {
+      "prop": "Transferencias",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerTransferencias"
+    },
+    {
+      "prop": "ConsultaAFIP",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerConsultaAFIP"
+    },
+    {
+      "prop": "NotificacionWindowsToast",
+      "method": "CrearObjetoServicios",
+      "x": "WindowsToastNotification"
+    },
+    {
+      "prop": "WebHook",
+      "method": "CrearObjetoServicios",
+      "x": "ManagerWebHook"
+    },
+    {
+      "prop": "Terminal",
+      "method": "CrearObjetoServicios",
+      "x": "Terminal"
+    },
+    {
+      "prop": "SaltosDeCampoYValoresSugeridos",
+      "method": "CrearObjetoServicios",
+      "x": "ServicioSaltosDeCampoYValoresSugeridos"
+    },
+    {
+      "prop": "PersonalizacionDeEntidades",
+      "method": "CrearObjetoServicios",
+      "x": "ServicioPersonalizacionDeEntidades"
+    },
+    {
+      "prop": "PoolDeObjetos",
+      "method": "CrearObjetoServicios",
+      "x": "ServicioPoolDeObjetos"
+    },
+    {
+      "prop": "ServicioNotificacionEnSegundoPlano",
+      "method": "CrearObjetoServicios",
+      "x": "ServicioNotificacionEnSegundoPlano"
+    },
+    {
+      "prop": "RegistroDeActividad",
+      "method": "CrearObjetoServicios",
+      "x": "ServicioRegistroDeActividad"
+    },
+    {
+      "prop": "MonitorSaludBasesDeDatos",
+      "method": "CrearObjetoServicios",
+      "x": "ServicioMonitorSaludBasesDeDatos"
+    }
+  ],
+  "globals": [
+    {
+      "global": "goFormularios",
+      "appProp": "oFormularios",
+      "x": "ManagerFormularios"
+    },
+    {
+      "global": "goMonitor",
+      "appProp": "oMonitor",
+      "x": "ManagerMonitor"
+    },
+    {
+      "global": "goDatos",
+      "appProp": "oDatos",
+      "x": "ServicioDatos"
+    },
+    {
+      "global": "goTimer",
+      "appProp": "oTimerBase",
+      "x": "TimerBase"
+    },
+    {
+      "global": "goControles",
+      "appProp": "oServicioControles",
+      "x": "ServicioControles"
+    },
+    {
+      "global": "goEstilos",
+      "appProp": "oEstilos",
+      "x": "estilos"
+    },
+    {
+      "global": "goParametros",
+      "appProp": "oParametros",
+      "x": "din_parametros"
+    },
+    {
+      "global": "goRegistry",
+      "appProp": "oRegistry",
+      "x": "din_registros"
+    }
+  ]
+}

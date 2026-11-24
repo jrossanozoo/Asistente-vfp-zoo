@@ -1,0 +1,2 @@
+define class colorytalle_colaboradorCheques as colaboradorCheques of colaboradorCheques.prg
+enddefine

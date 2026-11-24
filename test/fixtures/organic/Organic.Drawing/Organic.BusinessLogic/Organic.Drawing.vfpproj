@@ -1,0 +1,5 @@
+<Project>
+	<ItemGroup>
+		<AppReference Include="Organic.Core.app" />
+	</ItemGroup>
+</Project>

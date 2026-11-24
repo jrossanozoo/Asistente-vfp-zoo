@@ -1,0 +1,61 @@
+# DOVFP Symbols v2.5
+# Project: Organic.Core
+# Version: 16.0011.10506
+# Generated: 2026-11-11 15:45:31 UTC
+#
+# COLUMN DEFINITIONS:
+# [1] SymbolName   : Name of the class/procedure/function (case-insensitive)
+# [2] Type         : CLASS | PROCEDURE | FUNCTION | METHOD
+# [3] BaseClass    : VFP base class (Custom, Form, Container, etc.) or empty
+# [4] StubFileType : PRG (text file) | VCX (visual class binary) | SCX (form binary)
+# [5] SourceFile   : Origin file path (relative to project root)
+# [6] LastModified : File modification timestamp (UTC, yyyy-MM-dd HH:mm:ss)
+# [7] DataType     : VFP type code (C=Character, N=Numeric, L=Logical, D=Date, T=DateTime, Y=Currency, O=Object, X=Unknown)
+# [8] Signature    : Parameter list of the method/function/procedure, as written in source (e.g. 'txVal, toEntidad'); empty for CLASS/PROPERTY or when there are no parameters
+#
+# SYMBOLS:
+
+___dummy|CLASS|custom|VCX|..\..\centralss\dlls\menuruso\_argcommandbarsbase.vcx|2026-11-11 15:35:45||
+___ienumerator|CLASS|custom|VCX|..\..\centralss\dlls\menuruso\_argcommandbarsbase.vcx|2026-11-11 15:35:45||
+Mensajes|CLASS|Servicio|PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46||
+Mensajes.Advertir|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|tvMensaje as Variant, tnBotones as integer , tnBotonDefault as integer, tcTitulo as string, tnTiempoEspera as Integer
+Mensajes.Alertar|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|tvMensaje as Variant, tnBotones as integer , tnBotonDefault as integer, tcTitulo as string, tnTiempoEspera as Integer
+Mensajes.Cerrar|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.CrearLanzador|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|O|
+Mensajes.Destroy|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.Enviar|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|tvMensaje as Variant, tnBotones as integer , tnIcono as integer, tnBotonDefault as integer, tcTitulo as string, tnTiempoEspera as Integer
+Mensajes.EnviarEstiloWindows|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|tvMensaje as Variant, tnBotones as integer , tnIcono as integer, tnBotonDefault as integer, tcTitulo as string, tnTiempoEspera as Integer
+Mensajes.EnviarSinEspera|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|tcMensaje as String, tcTitulo as string, tcTextoBoton as String
+Mensajes.EnviarSinEsperaGenerico|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|tcMensaje as String, tcTitulo as string, tcTextoBoton as String, tcGif as string, tlNoHacePausa as Boolean
+Mensajes.EnviarSinEsperaProcesando|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|tcMensaje as String, tcTitulo as string, tcTextoBoton as String, tlNoHacePausa as Boolean
+Mensajes.EnviarSinEsperaProcesandoEnEscritorio|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|tcMensaje as String, tcTitulo as string, tcTextoBoton as String
+Mensajes.EsperaConBotonCancelar|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|L|tvMensaje as Variant, tcTitulo as string, tnTiempoEspera as Integer, tlProcesando as boolean
+Mensajes.EventoClickBotonSinEspera|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.HabilitarMensajeria|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|tlHabilitar as Boolean
+Mensajes.Informar|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|tvMensaje as Variant, tnBotones as integer , tnBotonDefault as integer, tcTitulo as string, tnTiempoEspera as Integer
+Mensajes.LiberarLanzadores|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|toColLanzadores as Collection
+Mensajes.LiberarLanzadoresSinFormularios|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.lMuestraMensajes|PROPERTY||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|L|
+Mensajes.nSegundosInteraccion|PROPERTY||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|
+Mensajes.ObtenerClaseLanzador|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|C|
+Mensajes.ObtenerTitulo|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|C|
+Mensajes.oColLanzadores|PROPERTY||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.oColLanzadores_Access|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|O|
+Mensajes.oColSuscriptoresSinEspera|PROPERTY||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.oColSuscriptoresSinEspera_Access|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|O|
+Mensajes.oForm|PROPERTY||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.oLanzador|PROPERTY||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|
+Mensajes.Preguntar|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|tvMensaje as Variant, tnBotones as integer , tnBotonDefault as integer, tcTitulo as string, tnTiempoEspera as Integer
+Mensajes.SeteaFormMensaje|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|t1 as Variant, t2 as Variant, t3 as Variant, t4 as Variant, t5 as Variant
+Mensajes.SuscribirAEventoBotonEspera|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|X|toObjeto as Object, tcMetodo as String
+ServiciosAplicacion|CLASS|zooSession|PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46||
+ServiciosAplicacion.AgregarControlDeServicio|METHOD||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|toServicio as Object
+ServiciosAplicacion.AsignarServicios|METHOD||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|
+ServiciosAplicacion.Clover|PROPERTY||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|
+ServiciosAplicacion.Clover_Access|METHOD||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|
+ServiciosAplicacion.ConsultaAFIP|PROPERTY||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|
+ServiciosAplicacion.ConsultaAFIP_Access|METHOD||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|O|
+ServiciosAplicacion.Controles|PROPERTY||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|
+ServiciosAplicacion.CrearObjetoServicios|METHOD||PRG|..\..\centralss\nucleo\_base\serviciosaplicacion.prg|2026-11-11 15:35:46|X|tcClase as String
+Servicio|CLASS|ZooSession|PRG|..\..\centralss\nucleo\_base\servicio.prg|2026-11-11 15:35:46||
+Mensajes.InformarConNote|METHOD||PRG|..\..\centralss\nucleo\_base\mensajes.prg|2026-11-11 15:35:46|N|tvMensaje as Variant|120|[Contrato] Informa al usuario.\nParametros:\ntvMensaje - Texto a mostrar.\nRetorna: Number - boton.
