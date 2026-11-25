@@ -20,4 +20,9 @@ define class UsoMensajes as Custom
 		lnTotal = _screen.zoo.app.cProyecto
 		this.Probar()
 	endfunc
+	function UsarLocal() as Void
+		local loMensajes
+		loMensajes = _Screen.Zoo.CrearObjeto( "Mensajes" )
+		loMensajes.Advertir( "x", tnBotones )
+	endfunc
 enddefine

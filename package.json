@@ -2,7 +2,7 @@
   "name": "asistente-vfp-zoo",
   "displayName": "Asistente VFP Zoo",
   "description": "Navegación semántica y ayuda contextual para Visual FoxPro Organic: productos, fábricas, multi-repo (.symbols, stubs), VCX y docstrings NOTE.",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "publisher": "local",
   "license": "MIT",
   "engines": {
@@ -162,6 +162,16 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Incluir `Organic.Mocks` (mocks generados para tests) en *Find References* y en los resultados heurísticos de *Go to Definition*."
+        },
+        "zoo.inlayHints.types": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Inlay hints con el tipo deducido al final del lado izquierdo de una asignación (`this.oMensajes‹: Mensajes› = …`). VS Code los controla además con `editor.inlayHints.enabled`."
+        },
+        "zoo.inlayHints.parameterNames": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Inlay hints con el nombre del parámetro antes de cada argumento (`Advertir(‹tvMensaje:› \"x\")`), solo cuando el método se resuelve sin heurística."
         },
         "zoo.references.includeHeuristic": {
           "type": "boolean",

@@ -11,39 +11,22 @@ import {
   uriToPath,
   wordAt,
 } from 'asistente-vfp-core';
-import type { ClassEntry, CursorContext, FileEntry, HostApi, LogicalLine, MemberEntry, ParsedFile, ResolvedTarget, SymbolIndex } from 'asistente-vfp-core';
+import type { ClassEntry, CursorContext, FileEntry, HostApi, MemberEntry, ParsedFile, ResolvedTarget } from 'asistente-vfp-core';
 import { isGeneratedPath, isMockPath, ZooState } from '../state';
+import { contextAt, escapeRe } from './context';
 
 export interface ReferenceResult {
   exact: Location[];
   heuristic: Location[];
 }
 
-/** Reutiliza el contexto de un archivo (líneas ya escaneadas) para otra posición. */
-function contextAt(
-  base: CursorContext,
-  position: { line: number; character: number },
-  ll: LogicalLine,
-  offset: number,
-  index: SymbolIndex,
-  file: FileEntry,
-): CursorContext {
-  const line = position.line;
-  const clsDecl = base.parsed.classes.find((c) => c.range.start.line <= line && line <= c.range.end.line);
-  const cls = clsDecl
-    ? (index.classEntries(clsDecl.name, { includeDownstream: true }).find((e) => e.decl.uri === base.uri) ?? { decl: clsDecl, layer: file.layer })
-    : undefined;
-  const pool = clsDecl ? clsDecl.members : base.parsed.procedures;
-  const member = pool.find((mm) => mm.kind !== 'property' && mm.kind !== 'object' && mm.range.start.line <= line && line <= mm.range.end.line);
-  return { ...base, position, ll, offset, cls, member };
-}
-
-function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export interface ReferenceOptions {
+  /** Solo este archivo (Document Highlight): sin filtros de generados ni mocks. */
+  onlyUri?: string;
 }
 
 /**
- * F3: referencias a una clase o a un método.
+ * F3: referencias a una clase o a un método (o propiedad).
  * Clase: `AS Clase`, `DEFINE CLASS … AS Clase`, literales de fábrica que la resuelven, createobject("Clase").
  * Método: llamadas `x.Metodo(` cuyo receptor se infiere de la jerarquía (exactas) o se desconoce (heurísticas).
  */
@@ -52,6 +35,7 @@ export async function findReferences(
   state: ZooState,
   api: HostApi,
   includeDeclaration: boolean,
+  opts: ReferenceOptions = {},
 ): Promise<ReferenceResult> {
   const result: ReferenceResult = { exact: [], heuristic: [] };
   const index = api.index;
@@ -85,7 +69,11 @@ export async function findReferences(
   const needle = name.toLowerCase();
   const wordRe = new RegExp(`\\b${escapeRe(name)}\\b`, 'gi');
   const files: FileEntry[] = [];
-  for (const f of index.allFiles()) {
+  if (opts.onlyUri) {
+    const f = index.getFile(opts.onlyUri);
+    if (f) files.push(f);
+  }
+  for (const f of opts.onlyUri ? [] : index.allFiles()) {
     if (!f.uri.startsWith('file:')) continue;
     if (f.parsed.headersOnly && !settings.referencesIncludeGenerated) continue;
     if (!settings.referencesIncludeGenerated && isGeneratedPath(uriToPath(f.uri))) continue;

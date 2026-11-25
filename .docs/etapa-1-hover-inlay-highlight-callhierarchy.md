@@ -136,6 +136,20 @@ endfunc
 - Cursor sobre `oMensajes` → se resaltan sus 3 usos.
 - Shift+Alt+H sobre `Advertir` → llamadas entrantes reales.
 
+## Implementación (v0.2.0) y decisiones que se apartan de este documento
+- **Estado:** implementada en la 0.2.0, con tests en los dos repos y verificada contra Organic.Core real.
+- **E1.1:** función común `typedObjectSection` en `Asistente-vfp/src/core/features/hover.ts`.
+- **E1.2, E1.3 y E1.4:** en el plugin, en `src/zoo/features/inlayHints.ts`, `documentHighlight.ts` y
+  `callHierarchy.ts`. `contextAt` pasó a `src/zoo/features/context.ts`. `findReferences` acepta
+  `{ onlyUri }`.
+- **Call Hierarchy, entrantes:** solo referencias exactas. Las llamadas con receptor desconocido **no se
+  incluyen** todavía, ni siquiera con `zoo.references.includeHeuristic`. Como esa opción está activa por
+  defecto, serían ruido. Queda para más adelante, si se pide, con una marca visible.
+- **Call Hierarchy, salientes:** se usó la opción A (escaneo del método en el momento); no se tocó el
+  parser ni el índice.
+- **Document Highlight:** la declaración con valor (`oMensajes = null`) cuenta como escritura (`Write`).
+  `local x` / `lparameters x` se marca como texto (`Text`).
+
 ## Riesgos y notas
 - **Call Hierarchy es lo más pesado de la etapa.** Conviene dejarlo último: si se complica, puede pasar
   a la etapa 2 sin bloquear lo demás.
