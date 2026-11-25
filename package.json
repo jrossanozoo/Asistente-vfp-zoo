@@ -2,7 +2,7 @@
   "name": "asistente-vfp-zoo",
   "displayName": "Asistente VFP Zoo",
   "description": "Navegación semántica y ayuda contextual para Visual FoxPro Organic: productos, fábricas, multi-repo (.symbols, stubs), VCX y docstrings NOTE.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "local",
   "license": "MIT",
   "engines": {
