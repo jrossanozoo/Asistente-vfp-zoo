@@ -131,7 +131,7 @@ claude mcp add organic -- node <ruta>\dist\mcp.js --root c:\LinceV3\Organic.Drag
 | `organic_get_doc(simbolo)` | Firma y `NOTE` (o doc heredada) de `Clase`, `Clase.Miembro` o un procedimiento. |
 | `organic_find_class(patron)` | Clases por parte del nombre. |
 
-Indexar Dragonfish con sus cinco repos hermanos (~17.000 archivos) tarda ~55 s la primera vez. Las siguientes usan la cache de `%TEMP%\asistente-vfp-zoo`.
+Indexar Dragonfish con sus cinco repos hermanos (~17.000 archivos) tarda ~25–35 s la primera vez. Las siguientes usan la cache de `%TEMP%\asistente-vfp-zoo` y arrancan en ~3–7 s, con ~0,7–0,9 GB de memoria.
 
 ## Desarrollo
 

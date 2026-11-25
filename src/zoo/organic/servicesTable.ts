@@ -1,4 +1,5 @@
-import type { ParsedFile, SymbolIndex } from 'asistente-vfp-core';
+import { memberLocals, readPrgSync, splitLines, uriToPath } from 'asistente-vfp-core';
+import type { MemberDecl, ParsedFile, SymbolIndex } from 'asistente-vfp-core';
 import embedded from './servicesTable.embedded.json';
 
 /** `goServicios.<prop>` → clase creada por la fábrica. */
@@ -90,6 +91,20 @@ function withOverrides(t: ServicesTable): ServicesTable {
 }
 
 /** Toma la tabla del código de Core (T2) si está en el índice con fuente; si no, la embebida. */
+const isCode = (m: MemberDecl): boolean => m.kind === 'method' || m.kind === 'procedure' || m.kind === 'function';
+
+/** El índice del workspace no guarda las variables de cada método: las recalcula desde el fuente. */
+function withLocals(p: ParsedFile | undefined): ParsedFile | undefined {
+  if (!p || p.classes.every((c) => c.members.every((m) => !isCode(m) || m.locals))) return p;
+  try {
+    const lines = splitLines(readPrgSync(uriToPath(p.uri)));
+    const fill = (m: MemberDecl): MemberDecl => (isCode(m) && !m.locals ? { ...m, locals: memberLocals(lines, m) } : m);
+    return { ...p, classes: p.classes.map((c) => ({ ...c, members: c.members.map(fill) })) };
+  } catch {
+    return p;
+  }
+}
+
 export function loadServicesTable(index: SymbolIndex): ServicesTable {
   const fileOf = (className: string): ParsedFile | undefined => {
     const entry = index
@@ -100,7 +115,7 @@ export function loadServicesTable(index: SymbolIndex): ServicesTable {
     return f && !f.parsed.headersOnly ? f.parsed : undefined;
   };
   const servicios = fileOf('ServiciosAplicacion');
-  const appBase = fileOf('AplicacionBase');
+  const appBase = withLocals(fileOf('AplicacionBase'));
   if (servicios && appBase) {
     const t = extractServices(servicios, appBase);
     if (t.services.length > 5) return withOverrides(t);

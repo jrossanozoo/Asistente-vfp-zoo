@@ -73,6 +73,6 @@ export async function createHeadless(opts: HeadlessOptions): Promise<Headless> {
     cache,
   });
   await zoo.plugin.afterIndex!(api);
-  await cache?.save().catch(() => undefined);
+  await cache?.save().catch((e: Error) => log(e.message));
   return { index, resolver, api, zoo, plugins, total };
 }
