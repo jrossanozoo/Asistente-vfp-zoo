@@ -11,12 +11,17 @@ export interface ServiceEntry {
   candidates?: string[];
 }
 
-/** Global `goX` / propiedad `_screen.zoo.app.oX` creada por IniciarServicio. */
+/**
+ * Global `goX` / propiedad `_screen.zoo.app.oX` creada por IniciarServicio
+ * o tomada de un servicio (`public goMensajes` + `this.oMensajes = goServicios.Mensajes`).
+ */
 export interface GlobalEntry {
   global: string;
   appProp: string;
   x: string;
   candidates?: string[];
+  /** Servicio de `goServicios` del que sale: su tipo es el del servicio. */
+  service?: string;
 }
 
 export interface ServicesTable {
@@ -54,6 +59,20 @@ export function extractServices(servicios: ParsedFile | undefined, appBase: Pars
     const global = call.args[2]?.literal || `g${appProp}`;
     if (globals.some((g) => g.global.toLowerCase() === global.toLowerCase())) continue;
     globals.push({ global, appProp, x: cls });
+  }
+  // `public goX` + `this.oX = goServicios.X` + `goX = this.oX` (goMensajes, goLibrerias):
+  // no pasan por IniciarServicio; la global se llama como el servicio y tiene su tipo.
+  for (const c of appBase?.classes ?? []) {
+    for (const m of c.members) {
+      for (const v of m.locals ?? []) {
+        if (v.kind !== 'public') continue;
+        const g = /^go(\w+)$/i.exec(v.name);
+        if (!g || globals.some((e) => e.global.toLowerCase() === v.name.toLowerCase())) continue;
+        const svc = services.find((s) => s.prop.toLowerCase() === g[1].toLowerCase());
+        if (!svc) continue;
+        globals.push({ global: v.name, appProp: `o${svc.prop}`, x: svc.x, service: svc.prop });
+      }
+    }
   }
   return { source: 'core', services, globals };
 }

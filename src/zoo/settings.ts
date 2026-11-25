@@ -14,7 +14,10 @@ export interface ZooSettings {
   vcxEnabled: boolean;
   codeLens: boolean;
   referencesIncludeGenerated: boolean;
+  referencesIncludeMocks: boolean;
   referencesIncludeHeuristic: boolean;
+  inlayHintsTypes: boolean;
+  inlayHintsParameterNames: boolean;
   noteCategories: string[];
   noteRequireCategory: boolean;
   noteRequireOnPublic: boolean;
@@ -56,7 +59,10 @@ export function readZooSettings(raw: Record<string, unknown> | undefined): ZooSe
     vcxEnabled: get('vcx.enabled', true),
     codeLens: get('codeLens.enabled', true),
     referencesIncludeGenerated: get('references.includeGenerated', false),
+    referencesIncludeMocks: get('references.includeMocks', false),
     referencesIncludeHeuristic: get('references.includeHeuristic', true),
+    inlayHintsTypes: get('inlayHints.types', true),
+    inlayHintsParameterNames: get('inlayHints.parameterNames', false),
     noteCategories: get('note.categories', DEFAULT_NOTE_CATEGORIES),
     noteRequireCategory: get('note.requireCategory', true),
     noteRequireOnPublic: get('note.requireOnPublicMethods', false),

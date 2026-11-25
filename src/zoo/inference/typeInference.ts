@@ -1,6 +1,7 @@
-import { chainBefore, findClosingParen, scanCode, splitTopLevel } from 'asistente-vfp-core';
-import type { CursorContext, HostApi, ResolvedTarget, StringCallContext, StringResolver, TypeResolver, TypeResult } from 'asistente-vfp-core';
+import { chainBefore, findClosingParen, readPrgSync, scanCode, scanLines, splitLines, splitTopLevel, uriToPath } from 'asistente-vfp-core';
+import type { CursorContext, FileEntry, HostApi, ResolvedTarget, Rng, ScannedLine, StringCallContext, StringResolver, TypeResolver, TypeResult } from 'asistente-vfp-core';
 import { FactoryRule, resolutionMarkdown } from '../organic/factoryResolver';
+import type { GlobalEntry } from '../organic/servicesTable';
 import type { ZooState } from '../state';
 
 function strip(seg: string): string {
@@ -8,6 +9,25 @@ function strip(seg: string): string {
 }
 
 const CALL_RE = /([A-Za-z_]\w*)\s*\(/g;
+
+/** Líneas de un archivo del índice, cacheadas mientras su entrada no cambie (se reemplaza al reindexar). */
+const sourceCache = new WeakMap<FileEntry, { lines: string[]; scanned: ScannedLine[] } | null>();
+
+function sourceOf(api: HostApi, uri: string): { lines: string[]; scanned: ScannedLine[] } | undefined {
+  const entry = api.index.getFile(uri);
+  if (!entry || entry.parsed.headersOnly) return undefined;
+  let src = sourceCache.get(entry);
+  if (src === undefined) {
+    try {
+      const lines = splitLines(readPrgSync(uriToPath(uri)));
+      src = { lines, scanned: scanLines(lines) };
+    } catch {
+      src = null;
+    }
+    sourceCache.set(entry, src);
+  }
+  return src ?? undefined;
+}
 
 /**
  * Inferencia de tipos del framework Organic (§6.5):
@@ -101,21 +121,57 @@ export class ZooTypeResolver implements TypeResolver {
     return undefined;
   }
 
-  /** `this.oX = …` en cualquier método de la clase actual. */
+  /**
+   * `this.oX = …` en cualquier método de la clase actual y, si no está, en sus ancestros con fuente
+   * (lo común en Organic: `this.oMensajes = _Screen.Zoo.CrearObjeto("Mensajes")` en el Init de la base).
+   */
   private assignedProperty(prop: string, ctx: CursorContext, api: HostApi): TypeResult | undefined {
-    if (!ctx.cls || ctx.cls.decl.uri !== ctx.uri) return undefined;
-    const re = new RegExp(`^\\s*this\\.${prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=(?!=)(.*)$`, 'i');
-    const { start, end } = ctx.cls.decl.range;
-    for (let line = start.line; line <= end.line && line < ctx.lines.length; line++) {
-      const s = ctx.scanned[line];
-      if (s.isComment || s.isText) continue;
-      const m = re.exec(s.code);
-      if (m) {
-        const t = this.rhsType(m[1], ctx, api);
-        if (t) return t;
+    if (!ctx.cls) return undefined;
+    const p = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`^\\s*this\\.${p}\\s*=(?!=)(.*)$`, 'i');
+    // Dentro de `with this`: `.oX = …`
+    const reWith = new RegExp(`^\\s*\\.${p}\\s*=(?!=)(.*)$`, 'i');
+    const scan = (lines: string[], scanned: ScannedLine[], range: Rng): TypeResult | undefined => {
+      const withStack: boolean[] = [];
+      for (let line = range.start.line; line <= range.end.line && line < lines.length; line++) {
+        const s = scanned[line];
+        if (s.isComment || s.isText) continue;
+        const w = /^\s*with\s+([\w.]+)/i.exec(s.code);
+        if (w) {
+          withStack.push(/^(m\.)?this$/i.test(w[1]));
+          continue;
+        }
+        if (/^\s*endwith\b/i.test(s.code)) {
+          withStack.pop();
+          continue;
+        }
+        const m = re.exec(s.code) ?? (withStack[withStack.length - 1] ? reWith.exec(s.code) : null);
+        if (m) {
+          const t = this.rhsType(m[1], ctx, api);
+          if (t) return t;
+        }
       }
+      return undefined;
+    };
+    if (ctx.cls.decl.uri === ctx.uri) {
+      const t = scan(ctx.lines, ctx.scanned, ctx.cls.decl.range);
+      if (t) return t;
+    }
+    for (const a of api.index.ancestors(ctx.cls)) {
+      const uri = a.fileUri ?? a.decl.uri;
+      if (!uri.startsWith('file:') || a.decl.approximate) continue;
+      const src = sourceOf(api, uri);
+      if (!src) continue;
+      const t = scan(src.lines, src.scanned, a.decl.range);
+      if (t) return t;
     }
     return undefined;
+  }
+
+  /** Tipo de una global de la tabla: la de un servicio (`goMensajes`) o la creada por IniciarServicio. */
+  private globalType(g: GlobalEntry, label: string, ctx: CursorContext, api: HostApi): TypeResult | undefined {
+    if (g.service) return this.resolveChain(['goServicios', g.service], ctx, api);
+    return this.fromRule(this.state.factories.ruleFor('CrearObjetoPorProducto'), g.x, g.candidates, label);
   }
 
   resolveChain(chain: string[], ctx: CursorContext, api: HostApi): TypeResult | undefined {
@@ -130,7 +186,7 @@ export class ZooTypeResolver implements TypeResolver {
         if (c.length === 4) {
           if (c[3] === 'oservicios') return this.resolveChain(['goServicios'], ctx, api);
           const g = svc.globals.find((e) => e.appProp.toLowerCase() === c[3]);
-          if (g) return this.fromRule(this.state.factories.ruleFor('CrearObjetoPorProducto'), g.x, g.candidates, `_screen.zoo.app.${g.appProp}`);
+          if (g) return this.globalType(g, `_screen.zoo.app.${g.appProp}`, ctx, api);
         }
       }
       return undefined;
@@ -145,7 +201,7 @@ export class ZooTypeResolver implements TypeResolver {
     }
     if (c.length === 1) {
       const g = svc.globals.find((e) => e.global.toLowerCase() === c[0]);
-      if (g) return this.fromRule(this.state.factories.ruleFor('CrearObjetoPorProducto'), g.x, g.candidates, g.global);
+      if (g) return this.globalType(g, g.global, ctx, api);
       if (c[0] === 'this' || c[0] === 'thisform') return undefined;
       return this.assignedVar(chain[0].replace(/(\(\)|\[\])$/, ''), ctx, api);
     }

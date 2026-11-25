@@ -7,11 +7,14 @@ import { nativeSignature } from './data/nativeFunctions';
 import { codeLenses } from './features/codeLens';
 import { factoryLiteralCompletion, memberCompletion } from './features/completion';
 import { findReferences } from './features/references';
+import { documentHighlights } from './features/documentHighlight';
+import { inlayHints } from './features/inlayHints';
+import { incomingCalls, outgoingCalls, prepareCallHierarchy } from './features/callHierarchy';
 import { reclassifyNoteDiagnostics, zooCodeActions, zooDiagnostics } from './diagnostics/zooDiagnostics';
 import { ZooStringResolver, ZooTypeResolver } from './inference/typeInference';
 import { productLabel } from './organic/factoryResolver';
 import { makeLocator, readSymbolsFile, symbolsToEntries } from './layers/symbolsReader';
-import { isGeneratedPath, ZooState } from './state';
+import { isGeneratedPath, isMockPath, ZooState } from './state';
 import { vcxContent, vcxEntries } from './vcx/vcxReader';
 import { detectSolution, solutionRoots, sourceFolders, sourceLayer, symbolsLayer } from './workspace/solution';
 
@@ -103,6 +106,9 @@ export function createZooPlugin(): ZooPluginHandle {
 
     capabilities: () => ({
       referencesProvider: true,
+      documentHighlightProvider: true,
+      inlayHintProvider: true,
+      callHierarchyProvider: true,
       codeLensProvider: { resolveProvider: false },
       completionProvider: { triggerCharacters: ['.', '"', "'", '['], resolveProvider: false },
     }),
@@ -125,6 +131,13 @@ export function createZooPlugin(): ZooPluginHandle {
       const mode = S(api).settings.indexGenerated;
       if (mode === 'none') return { skip: true };
       return { headersOnly: mode === 'headers' };
+    },
+
+    excludeHeuristic(uri, api) {
+      if (!uri.startsWith('file:')) return false;
+      const s = S(api).settings;
+      const p = uriToPath(uri);
+      return (!s.referencesIncludeMocks && isMockPath(p)) || (!s.referencesIncludeGenerated && isGeneratedPath(p));
     },
 
     async afterIndex(api) {
@@ -189,6 +202,20 @@ export function createZooPlugin(): ZooPluginHandle {
         const r = await findReferences(target, S(api), api, p.context.includeDeclaration);
         return [...r.exact, ...r.heuristic];
       });
+      c.onDocumentHighlight(async (p) => {
+        const ctx = await api.cursorContext(p.textDocument.uri, p.position);
+        return ctx ? documentHighlights(ctx, S(api), api) : [];
+      });
+      c.languages.inlayHint.on(async (p) => {
+        const ctx = await api.cursorContext(p.textDocument.uri, p.range.start);
+        return ctx ? inlayHints(ctx, p.range, S(api), api) : [];
+      });
+      c.languages.callHierarchy.onPrepare(async (p) => {
+        const ctx = await api.cursorContext(p.textDocument.uri, p.position);
+        return ctx ? prepareCallHierarchy(ctx, api) : [];
+      });
+      c.languages.callHierarchy.onIncomingCalls((p) => incomingCalls(p.item, S(api), api));
+      c.languages.callHierarchy.onOutgoingCalls((p) => outgoingCalls(p.item, api));
       c.onCodeLens(async (p) => {
         const st = S(api);
         if (!st.settings.codeLens) return [];

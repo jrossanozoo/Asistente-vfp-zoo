@@ -11,15 +11,19 @@ Implementa la especificación `especificacion-extension-vscode-navegacion-vfp.md
 | Id | Funcionalidad | Detalle |
 |---|---|---|
 | F1 | **Go to Definition** | Todo lo de la genérica, más los literales de fábrica (`InstanciarEntidad("Cliente")` abre `EntColoryTalle_Cliente`, `Ent_Cliente` y `Din_EntidadCliente` en *peek*, en orden de precedencia), `LoadReference("Clase", "Organic.X.app")` y los miembros de `goServicios.X`, `go*` y `_screen.zoo(.app)`. |
+| F1b | **Go to Type Definition** | Sobre una variable, propiedad o cadena `a.b.c` abre la **clase** del tipo deducido (el mismo que usa la completion): `this.oX` asignada desde una fábrica (también en el `Init` de una clase padre), `loX`, `goServicios`, `goServicios.X`, globales `go*` (incluidas `goMensajes`/`goLibrerias`, que salen de su servicio), `_screen.zoo(.app)` y `this`. Si hay varias candidatas por producto, las muestra en *peek* en orden de precedencia. Si el tipo no se deduce, no devuelve nada. F12 sobre una global `go*` sin declaración también va a la clase. Sobre una propiedad con tipo deducido (`this.oX = …`, también `.oX = …` dentro de `with this`), F12 va a la clase, igual que con una variable local; la declaración `oX = null` queda en *Go to Declaration*, y el hover indica el tipo deducido. |
 | F2 | **Go to Implementation** | Subclases y overrides en todas las capas y en los repos consumidores (`zoo.downstreamRoots`). |
 | F3 | **Find References** | `AS Clase`, `DEFINE CLASS … AS`, literales de fábrica que resuelven a la clase y llamadas `x.Metodo(` con receptor de la jerarquía. Las referencias heurísticas (receptor desconocido) van al final. `Organic.Generated` queda afuera salvo con `zoo.references.includeGenerated`. |
-| F4 | **Hover** | Firma, `NOTE`, jerarquía, procedencia (`Organic.Core.app · símbolos v2.5 · sin fuente local`) y, en los literales de fábrica, la **tabla por producto**. |
+| F4 | **Hover** | Firma, `NOTE`, jerarquía, procedencia (`Organic.Core.app · símbolos v2.5 · sin fuente local`) y, en los literales de fábrica, la **tabla por producto**. Sobre un objeto de tipo conocido, sea **variable o propiedad** (`loX`, `this.oX`, `goServicios.X`), muestra lo mismo: la clase con su doc, las candidatas por producto y sus métodos y propiedades públicos. |
 | F5 | **Type Hierarchy** | Supertipos y subtipos cross-repo. |
 | F6 | **Outline / Ctrl+T** | En todas las capas. |
 | F7 | **CodeLens** | Clases: "N subclases · resuelta por `CrearObjetoPorProducto("X")` en: …" (según las llamadas reales del código). Métodos: "N overrides · redefine Padre.Metodo". |
 | F8 | **Signature Help** | Con receptor inferido, firmas de otros repos (fuente, `.symbols` o stub), varias firmas si los overrides difieren y un catálogo acotado de funciones nativas de VFP (`STRTRAN`, `SUBSTR`, `PADL`, `ALINES`, …) con textos propios. |
 | F9 | **Completion de miembros** | Después de `.` cuando el tipo se conoce; respeta `protected`/`hidden`. Al aceptar un método inserta `Nombre()` y abre la ayuda de parámetros (si ya hay `(`, no duplica). |
 | F9b | **Completion de literales de fábrica** | Dentro de `InstanciarEntidad("…")`, etc.: los nombres que la fábrica puede resolver, con la clase efectiva para el producto. |
+| F10 | **Inlay Hints** | Tipo deducido al final del lado izquierdo de una asignación: `this.oMensajes‹: Mensajes› = _Screen.zoo.CrearObjeto("Mensajes")`, `loEnt‹: EntColoryTalle_Cliente›`, `.oX` dentro de `with this`. Con clic se va a la clase; si hay varias candidatas por producto, muestra `+N`. Opcional: nombre del parámetro antes de cada argumento (`zoo.inlayHints.parameterNames`). Solo para el rango visible y nunca con tipos heurísticos. |
+| F11 | **Document Highlight** | Al poner el cursor sobre un símbolo, resalta sus usos en el archivo, separando escritura (asignación) de lectura. Mismo criterio que *Find References*: `Advertir` sobre un receptor `Mensajes` no resalta cualquier `Advertir`. Las locales se resaltan solo dentro de su método. |
+| F12 | **Call Hierarchy** (Shift+Alt+H) | Llamadas entrantes: referencias exactas agrupadas por método, más los `dodefault()` de los overrides. Llamadas salientes: cada llamada del método resuelta sin heurística (sin funciones nativas). Respeta `includeGenerated` / `includeMocks`. |
 
 ### Inferencia de tipos (§6.5)
 
@@ -71,6 +75,10 @@ Diagnósticos del framework:
 | D4 | warning | Literal de fábrica sin ninguna clase candidata en el índice. |
 | D5 | warning | `OF lib.prg` que no coincide con el archivo real de la clase padre. |
 
+> **Otras extensiones FoxPro:** si hay otra extensión con IntelliSense para FoxPro activa (por ejemplo
+> `zoologic.vfp-intellisense`), VS Code mezcla sus resultados con los de esta y aparecen duplicados en
+> F12, hover y completion. Conviene desactivarla mientras se usa esta.
+
 ## Configuración
 
 | Clave | Por defecto | Para qué |
@@ -84,7 +92,9 @@ Diagnósticos del framework:
 | `zoo.factories` | `[]` | Reglas de fábrica extra (mismo formato que `src/zoo/organic/factoryRules.ts`). |
 | `zoo.symbols.enabled` / `zoo.stubs.enabled` / `zoo.vcx.enabled` | `true` | Capas T3, T4 y VCX. |
 | `zoo.codeLens.enabled` | `true` | CodeLens. |
-| `zoo.references.includeGenerated` / `includeHeuristic` | `false` / `true` | Alcance de *Find References*. |
+| `zoo.references.includeGenerated` / `includeHeuristic` | `false` / `true` | Alcance de *Find References*. `includeGenerated` también aplica a los resultados heurísticos de F12. |
+| `zoo.references.includeMocks` | `false` | Incluir `Organic.Mocks` en *Find References* y en los resultados heurísticos de F12 (receptor de tipo desconocido). |
+| `zoo.inlayHints.types` / `parameterNames` | `true` / `false` | Inlay hints de tipo deducido y de nombre de parámetro. VS Code los controla además con `editor.inlayHints.enabled`. |
 | `zoo.note.categories` | Dependencia, Extension, Generacion, Contrato, Gotcha, Obsoleto | Categorías válidas. |
 | `zoo.note.requireCategory` / `requireOnPublicMethods` / `checkAscii` | `true` / `false` / `true` | N1, N6, N5. |
 | `zoo.diagnostics.unreachableProductClass` / `factoryLiteral` / `ofLib` | `true` | D3, D4, D5. |

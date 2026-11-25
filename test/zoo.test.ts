@@ -2,6 +2,7 @@ import * as path from 'path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   buildCursorContext,
+  declarationLocations,
   definitionWithLocals,
   hoverMarkdown,
   implementationLocations,
@@ -10,7 +11,12 @@ import {
   readPrgSync,
   signatureHelp,
   toLspDiagnostic,
+  typeDefinitionLocations,
+  typedObjectSection,
 } from 'asistente-vfp-core';
+import { inlayHints } from '../src/zoo/features/inlayHints';
+import { documentHighlights } from '../src/zoo/features/documentHighlight';
+import { incomingCalls, outgoingCalls, prepareCallHierarchy } from '../src/zoo/features/callHierarchy';
 import type { CursorContext } from 'asistente-vfp-core';
 import { createHeadless, Headless } from '../src/zoo/headless';
 import { memberCompletion, factoryLiteralCompletion } from '../src/zoo/features/completion';
@@ -180,6 +186,185 @@ describe('inferencia, completion y signature help (F8/F9)', () => {
     const nat = signatureHelp(dragon.index, dragon.resolver, ctxAt(dragon, rel, '"a",  )', 6), dragon.zoo.plugin.signatureFallback)!;
     expect(nat.signatures[0].label).toMatch(/^STRTRAN\(/);
     expect(nat.activeParameter).toBe(2);
+  });
+});
+
+describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
+  const rel = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/UsoMensajes.prg';
+  const at = (needle: string, delta: number, r = rel) => ctxAt(dragon, r, needle, delta);
+  const names = (locs: { uri: string }[]) => locs.map((l) => path.basename(l.uri));
+  const f12 = (needle: string, delta: number, r = rel) => {
+    const ctx = at(needle, delta, r);
+    return definitionWithLocals(dragon.resolver.resolveAt(ctx), ctx);
+  };
+  const declaration = (needle: string, delta: number, r = rel) => {
+    const ctx = at(needle, delta, r);
+    return declarationLocations(dragon.resolver.resolveAt(ctx), ctx);
+  };
+  const typeDef = (needle: string, delta: number, r = rel) => {
+    const ctx = at(needle, delta, r);
+    return names(typeDefinitionLocations(dragon.index, dragon.resolver.typeAt(ctx), ctx));
+  };
+
+  it('tabla de globales: goMensajes y goLibrerias salen de su servicio', () => {
+    const svc = dragon.zoo.state()!.services;
+    expect(svc.globals.find((g) => g.global === 'goMensajes')).toMatchObject({ appProp: 'oMensajes', service: 'Mensajes' });
+    expect(svc.globals.find((g) => g.global === 'goLibrerias')).toBeUndefined(); // no hay servicio Librerias en la fixture
+  });
+
+  it('this.oMensajes (asignada con _Screen.Zoo.CrearObjeto): F12 → clase (como una local), Go to Declaration → propiedad', () => {
+    expect(names(f12('this.oMensajes.Advertir', 'this.o'.length))).toEqual(['mensajes.prg']);
+    expect(names(f12('this.oMensajes = _Screen', 'this.o'.length))).toEqual(['mensajes.prg']);
+    const decl = declaration('this.oMensajes.Advertir', 'this.o'.length);
+    expect(names(decl)).toEqual(['UsoMensajes.prg']);
+    expect(decl[0].range.start.line).toBe(1);
+    // Sobre la propia declaración, F12 se queda en la propiedad.
+    expect(names(f12('oMensajes = null', 2))).toEqual(['UsoMensajes.prg']);
+    expect(typeDef('this.oMensajes.Advertir', 'this.o'.length)).toEqual(['mensajes.prg']);
+    const md = hoverMarkdown(dragon.index, dragon.resolver.resolveAt(at('this.oMensajes.Advertir', 'this.o'.length)))!;
+    expect(md).toContain('**Tipo deducido:** `Mensajes`');
+  });
+
+  it('propiedad asignada dentro de WITH this (.oErrores = CrearObjeto(…)) → ManagerErrores', () => {
+    expect(names(f12('this.oErrores.Loguear', 'this.o'.length))).toEqual(['managererrores.prg']);
+    expect(typeDef('this.oErrores.Loguear', 'this.o'.length)).toEqual(['managererrores.prg']);
+    const log = dragon.resolver.resolveAt(at('Loguear(', 2))!;
+    expect(log.heuristic).toBeFalsy();
+    expect(log.members![0].owner!.decl.name).toBe('ManagerErrores');
+  });
+
+  it('this.oMensajes asignada en el Init de la clase padre (otro archivo) → Mensajes', () => {
+    const hija = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/Ventas/UsoMensajesHija.prg';
+    expect(typeDef('this.oMensajes.Advertir', 'this.o'.length, hija)).toEqual(['mensajes.prg']);
+    const adv = dragon.resolver.resolveAt(at('Advertir( "y"', 2, hija))!;
+    expect(adv.heuristic).toBeFalsy();
+    expect(adv.members![0].owner!.decl.name).toBe('Mensajes');
+  });
+
+  it('goServicios.Mensajes: F12 y Type Definition → ColorYTalle_Mensajes y Mensajes (precedencia por producto), Declaration → propiedad', () => {
+    expect(names(f12('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+    expect(names(declaration('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['serviciosaplicacion.PRG']);
+    expect(typeDef('goServicios.Mensajes.', 'goServicios.M'.length)).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+  });
+
+  it('goMensajes (sin declaración en la fuente): F12 y Type Definition → la clase', () => {
+    expect(names(f12('goMensajes.', 2))).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+    expect(typeDef('goMensajes.', 2)).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+  });
+
+  it('F12 sobre Advertir en las tres formas → solo Mensajes.Advertir', () => {
+    for (const needle of ['this.oMensajes.Advertir', 'goServicios.Mensajes.Advertir', 'goMensajes.Advertir']) {
+      const locs = f12(needle, needle.length - 3);
+      expect(names(locs), needle).toEqual(['mensajes.prg']);
+    }
+  });
+
+  it('receptor desconocido: la búsqueda por nombre excluye Organic.Mocks salvo con includeMocks', () => {
+    const settings = dragon.zoo.state()!.settings;
+    const sinMocks = names(f12('loNada.Advertir', 'loNada.A'.length));
+    expect(sinMocks).toContain('mensajes.prg');
+    expect(sinMocks).not.toContain('Mock_Mensajes.prg');
+    settings.referencesIncludeMocks = true;
+    try {
+      expect(names(f12('loNada.Advertir', 'loNada.A'.length))).toContain('Mock_Mensajes.prg');
+    } finally {
+      settings.referencesIncludeMocks = false;
+    }
+  });
+
+  it('Type Definition: local AS, this, _screen.zoo(.app) y tipo no deducible', () => {
+    expect(typeDef('loForm.Probar', 2)).toEqual(['UsoMensajes.prg']);
+    expect(typeDef('this.Probar()', 2)).toEqual(['UsoMensajes.prg']);
+    expect(typeDef('_screen.zoo.app', '_screen.z'.length)).toEqual(['zoo.prg']);
+    expect(typeDef('_screen.zoo.app', '_screen.zoo.a'.length)).toEqual(['aplicacioncolorytalle.prg', 'aplicacionbase.prg']);
+    expect(typeDef('loNada.Advertir', 2)).toEqual([]);
+    expect(typeDef('"Mensajes"', 2)).toEqual(['mensajes.prg']);
+  });
+});
+
+describe('Etapa 1: hover uniforme, inlay hints, document highlight, call hierarchy', () => {
+  const rel = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/UsoMensajes.prg';
+  const text = () => readPrgSync(abs(rel));
+  const lineOf = (needle: string) => posOf(text(), needle).line;
+  const at = (needle: string, delta: number) => ctxAt(dragon, rel, needle, delta);
+  const labelOf = (h: { label: string | { value: string }[] }) => (typeof h.label === 'string' ? h.label : h.label.map((p) => p.value).join(''));
+  const qualified = (i: { name: string; detail?: string }) => `${(i.detail ?? '').split(' · ')[0]}.${i.name}`;
+
+  it('E1.1: el hover de una propiedad tipada muestra lo mismo que el de una variable del mismo tipo', () => {
+    const prop = dragon.resolver.resolveAt(at('this.oMensajes.Advertir', 'this.o'.length))!;
+    const local = dragon.resolver.resolveAt(at('loMensajes.Advertir', 2))!;
+    const section = typedObjectSection(dragon.index, [dragon.index.getClass('Mensajes')!]).join('\n\n');
+    expect(section).toContain('define class Mensajes');
+    expect(section).toMatch(/\*\*Métodos\*\*[\s\S]*Advertir\(/);
+    expect(hoverMarkdown(dragon.index, prop)).toContain(section);
+    expect(hoverMarkdown(dragon.index, local)).toContain(section);
+  });
+
+  it('E1.2: inlay hints de tipo en asignaciones (this.oX, .oX en WITH, local) y nada si no se deduce', () => {
+    const base = at('define class UsoMensajes', 0);
+    const all = inlayHints(base, { start: { line: 0, character: 0 }, end: { line: 999, character: 0 } }, dragon.zoo.state()!, dragon.api);
+    const byLine = all.map((h) => `${h.position.line}:${labelOf(h)}`);
+    expect(byLine).toContain(`${lineOf('this.oMensajes = _Screen')}:: Mensajes`);
+    expect(byLine).toContain(`${lineOf('.oErrores = _Screen')}:: ManagerErrores`);
+    expect(byLine).toContain(`${lineOf('loMensajes = _Screen')}:: Mensajes`);
+    expect(all.every((h) => h.kind === 1)).toBe(true); // sin hints de parámetro por defecto
+    const hint = all.find((h) => h.position.line === lineOf('this.oMensajes = _Screen'))!;
+    expect(hint.position.character).toBe('\t\tthis.oMensajes'.length);
+    // Solo el rango pedido.
+    const one = inlayHints(base, { start: { line: lineOf('loMensajes = _Screen'), character: 0 }, end: { line: lineOf('loMensajes = _Screen'), character: 0 } }, dragon.zoo.state()!, dragon.api);
+    expect(one).toHaveLength(1);
+  });
+
+  it('E1.2: inlay hints de nombre de parámetro solo con la configuración activa y sin heurística', () => {
+    const settings = dragon.zoo.state()!.settings;
+    settings.inlayHintsParameterNames = true;
+    try {
+      const base = at('define class UsoMensajes', 0);
+      const all = inlayHints(base, { start: { line: 0, character: 0 }, end: { line: 999, character: 0 } }, dragon.zoo.state()!, dragon.api);
+      const params = all.filter((h) => h.kind === 2).map((h) => `${h.position.line}:${labelOf(h)}`);
+      expect(params).toContain(`${lineOf('goMensajes.Advertir')}:tvMensaje:`);
+      expect(params).toContain(`${lineOf('loMensajes.Advertir')}:tvMensaje:`);
+      expect(params.filter((p) => p.startsWith(`${lineOf('loMensajes.Advertir')}:`))).toHaveLength(1); // tnBotones se llama igual
+      expect(params.some((p) => p.startsWith(`${lineOf('loNada.Advertir')}:`))).toBe(false); // receptor desconocido
+    } finally {
+      settings.inlayHintsParameterNames = false;
+    }
+  });
+
+  it('E1.3: document highlight de una propiedad (Write en la asignación, Read en el uso)', async () => {
+    const hl = await documentHighlights(at('this.oMensajes.Advertir', 'this.o'.length), dragon.zoo.state()!, dragon.api);
+    const lines = hl.map((h) => `${h.range.start.line}:${h.kind}`);
+    expect(lines).toContain(`${lineOf('oMensajes = null')}:3`);
+    expect(lines).toContain(`${lineOf('this.oMensajes = _Screen')}:3`);
+    expect(lines).toContain(`${lineOf('this.oMensajes.Advertir')}:2`);
+  });
+
+  it('E1.3: document highlight de una local queda en su método; de un método, solo receptores de la jerarquía', async () => {
+    const loc = await documentHighlights(at('loMensajes.Advertir', 2), dragon.zoo.state()!, dragon.api);
+    expect(loc.map((h) => h.range.start.line)).toEqual([lineOf('local loMensajes'), lineOf('loMensajes = _Screen'), lineOf('loMensajes.Advertir')]);
+    expect(loc[1].kind).toBe(3);
+    const adv = await documentHighlights(at('goMensajes.Advertir', 'goMensajes.A'.length), dragon.zoo.state()!, dragon.api);
+    const advLines = adv.map((h) => h.range.start.line);
+    for (const n of ['this.oMensajes.Advertir', 'goServicios.Mensajes.Advertir', 'goMensajes.Advertir', 'loMensajes.Advertir']) expect(advLines, n).toContain(lineOf(n));
+    expect(advLines).not.toContain(lineOf('loNada.Advertir'));
+  });
+
+  it('E1.4: call hierarchy de Mensajes.Advertir (entrantes con dodefault de overrides) y salientes de Probar', async () => {
+    const st = dragon.zoo.state()!;
+    const [item] = prepareCallHierarchy(at('goMensajes.Advertir', 'goMensajes.A'.length), dragon.api);
+    expect(qualified(item)).toBe('Mensajes.Advertir');
+    const incoming = await incomingCalls(item, st, dragon.api);
+    const from = incoming.map((c) => qualified(c.from));
+    expect(from).toEqual(expect.arrayContaining(['UsoMensajes.Probar', 'UsoMensajes.UsarLocal', 'UsoMensajesHija.Otra', 'MensajesHijo.Advertir', 'UsoDragonfish.ConNote']));
+    expect(incoming.find((c) => qualified(c.from) === 'UsoMensajes.Probar')!.fromRanges).toHaveLength(3);
+
+    const [probar] = prepareCallHierarchy(at('function Probar', 'function P'.length), dragon.api);
+    expect(qualified(probar)).toBe('UsoMensajes.Probar');
+    const outgoing = await outgoingCalls(probar, dragon.api);
+    const to = outgoing.map((c) => qualified(c.to));
+    expect(to).toContain('Mensajes.Advertir');
+    expect(to).toContain('UsoMensajes.Probar');
+    expect(outgoing.find((c) => qualified(c.to) === 'Mensajes.Advertir')!.fromRanges).toHaveLength(3); // loNada.Advertir queda afuera
   });
 });
 
