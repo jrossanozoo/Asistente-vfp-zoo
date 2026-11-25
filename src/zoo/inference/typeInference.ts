@@ -127,12 +127,25 @@ export class ZooTypeResolver implements TypeResolver {
    */
   private assignedProperty(prop: string, ctx: CursorContext, api: HostApi): TypeResult | undefined {
     if (!ctx.cls) return undefined;
-    const re = new RegExp(`^\\s*this\\.${prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=(?!=)(.*)$`, 'i');
+    const p = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`^\\s*this\\.${p}\\s*=(?!=)(.*)$`, 'i');
+    // Dentro de `with this`: `.oX = …`
+    const reWith = new RegExp(`^\\s*\\.${p}\\s*=(?!=)(.*)$`, 'i');
     const scan = (lines: string[], scanned: ScannedLine[], range: Rng): TypeResult | undefined => {
+      const withStack: boolean[] = [];
       for (let line = range.start.line; line <= range.end.line && line < lines.length; line++) {
         const s = scanned[line];
         if (s.isComment || s.isText) continue;
-        const m = re.exec(s.code);
+        const w = /^\s*with\s+([\w.]+)/i.exec(s.code);
+        if (w) {
+          withStack.push(/^(m\.)?this$/i.test(w[1]));
+          continue;
+        }
+        if (/^\s*endwith\b/i.test(s.code)) {
+          withStack.pop();
+          continue;
+        }
+        const m = re.exec(s.code) ?? (withStack[withStack.length - 1] ? reWith.exec(s.code) : null);
         if (m) {
           const t = this.rhsType(m[1], ctx, api);
           if (t) return t;

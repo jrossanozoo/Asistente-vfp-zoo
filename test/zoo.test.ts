@@ -203,11 +203,21 @@ describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
     expect(svc.globals.find((g) => g.global === 'goLibrerias')).toBeUndefined(); // no hay servicio Librerias en la fixture
   });
 
-  it('this.oMensajes (asignada con _Screen.Zoo.CrearObjeto): F12 → propiedad, Type Definition → Mensajes', () => {
+  it('this.oMensajes (asignada con _Screen.Zoo.CrearObjeto): F12 → propiedad y clase, Type Definition → Mensajes', () => {
     const decl = f12('this.oMensajes.Advertir', 'this.o'.length);
-    expect(names(decl)).toEqual(['UsoMensajes.prg']);
+    expect(names(decl)).toEqual(['UsoMensajes.prg', 'mensajes.prg']);
     expect(decl[0].range.start.line).toBe(1);
     expect(typeDef('this.oMensajes.Advertir', 'this.o'.length)).toEqual(['mensajes.prg']);
+    const md = hoverMarkdown(dragon.index, dragon.resolver.resolveAt(at('this.oMensajes.Advertir', 'this.o'.length)))!;
+    expect(md).toContain('**Tipo deducido:** `Mensajes`');
+  });
+
+  it('propiedad asignada dentro de WITH this (.oErrores = CrearObjeto(…)) → ManagerErrores', () => {
+    expect(names(f12('this.oErrores.Loguear', 'this.o'.length))).toEqual(['UsoMensajes.prg', 'managererrores.prg']);
+    expect(typeDef('this.oErrores.Loguear', 'this.o'.length)).toEqual(['managererrores.prg']);
+    const log = dragon.resolver.resolveAt(at('Loguear(', 2))!;
+    expect(log.heuristic).toBeFalsy();
+    expect(log.members![0].owner!.decl.name).toBe('ManagerErrores');
   });
 
   it('this.oMensajes asignada en el Init de la clase padre (otro archivo) → Mensajes', () => {
@@ -218,8 +228,8 @@ describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
     expect(adv.members![0].owner!.decl.name).toBe('Mensajes');
   });
 
-  it('goServicios.Mensajes: F12 → propiedad, Type Definition → ColorYTalle_Mensajes y Mensajes (precedencia por producto)', () => {
-    expect(names(f12('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['serviciosaplicacion.PRG']);
+  it('goServicios.Mensajes: F12 → propiedad y clases, Type Definition → ColorYTalle_Mensajes y Mensajes (precedencia por producto)', () => {
+    expect(names(f12('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['serviciosaplicacion.PRG', 'colorytalle_mensajes.prg', 'mensajes.prg']);
     expect(typeDef('goServicios.Mensajes.', 'goServicios.M'.length)).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
   });
 
