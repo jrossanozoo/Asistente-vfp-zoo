@@ -2,6 +2,7 @@ import * as path from 'path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   buildCursorContext,
+  declarationLocations,
   definitionWithLocals,
   hoverMarkdown,
   implementationLocations,
@@ -192,6 +193,10 @@ describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
     const ctx = at(needle, delta, r);
     return definitionWithLocals(dragon.resolver.resolveAt(ctx), ctx);
   };
+  const declaration = (needle: string, delta: number, r = rel) => {
+    const ctx = at(needle, delta, r);
+    return declarationLocations(dragon.resolver.resolveAt(ctx), ctx);
+  };
   const typeDef = (needle: string, delta: number, r = rel) => {
     const ctx = at(needle, delta, r);
     return names(typeDefinitionLocations(dragon.index, dragon.resolver.typeAt(ctx), ctx));
@@ -203,17 +208,21 @@ describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
     expect(svc.globals.find((g) => g.global === 'goLibrerias')).toBeUndefined(); // no hay servicio Librerias en la fixture
   });
 
-  it('this.oMensajes (asignada con _Screen.Zoo.CrearObjeto): F12 → propiedad y clase, Type Definition → Mensajes', () => {
-    const decl = f12('this.oMensajes.Advertir', 'this.o'.length);
-    expect(names(decl)).toEqual(['UsoMensajes.prg', 'mensajes.prg']);
+  it('this.oMensajes (asignada con _Screen.Zoo.CrearObjeto): F12 → clase (como una local), Go to Declaration → propiedad', () => {
+    expect(names(f12('this.oMensajes.Advertir', 'this.o'.length))).toEqual(['mensajes.prg']);
+    expect(names(f12('this.oMensajes = _Screen', 'this.o'.length))).toEqual(['mensajes.prg']);
+    const decl = declaration('this.oMensajes.Advertir', 'this.o'.length);
+    expect(names(decl)).toEqual(['UsoMensajes.prg']);
     expect(decl[0].range.start.line).toBe(1);
+    // Sobre la propia declaración, F12 se queda en la propiedad.
+    expect(names(f12('oMensajes = null', 2))).toEqual(['UsoMensajes.prg']);
     expect(typeDef('this.oMensajes.Advertir', 'this.o'.length)).toEqual(['mensajes.prg']);
     const md = hoverMarkdown(dragon.index, dragon.resolver.resolveAt(at('this.oMensajes.Advertir', 'this.o'.length)))!;
     expect(md).toContain('**Tipo deducido:** `Mensajes`');
   });
 
   it('propiedad asignada dentro de WITH this (.oErrores = CrearObjeto(…)) → ManagerErrores', () => {
-    expect(names(f12('this.oErrores.Loguear', 'this.o'.length))).toEqual(['UsoMensajes.prg', 'managererrores.prg']);
+    expect(names(f12('this.oErrores.Loguear', 'this.o'.length))).toEqual(['managererrores.prg']);
     expect(typeDef('this.oErrores.Loguear', 'this.o'.length)).toEqual(['managererrores.prg']);
     const log = dragon.resolver.resolveAt(at('Loguear(', 2))!;
     expect(log.heuristic).toBeFalsy();
@@ -228,8 +237,9 @@ describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
     expect(adv.members![0].owner!.decl.name).toBe('Mensajes');
   });
 
-  it('goServicios.Mensajes: F12 → propiedad y clases, Type Definition → ColorYTalle_Mensajes y Mensajes (precedencia por producto)', () => {
-    expect(names(f12('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['serviciosaplicacion.PRG', 'colorytalle_mensajes.prg', 'mensajes.prg']);
+  it('goServicios.Mensajes: F12 y Type Definition → ColorYTalle_Mensajes y Mensajes (precedencia por producto), Declaration → propiedad', () => {
+    expect(names(f12('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+    expect(names(declaration('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['serviciosaplicacion.PRG']);
     expect(typeDef('goServicios.Mensajes.', 'goServicios.M'.length)).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
   });
 
