@@ -12,7 +12,7 @@ import {
   wordAt,
 } from 'asistente-vfp-core';
 import type { ClassEntry, CursorContext, FileEntry, HostApi, LogicalLine, MemberEntry, ParsedFile, ResolvedTarget, SymbolIndex } from 'asistente-vfp-core';
-import { isGeneratedPath, ZooState } from '../state';
+import { isGeneratedPath, isMockPath, ZooState } from '../state';
 
 export interface ReferenceResult {
   exact: Location[];
@@ -89,6 +89,7 @@ export async function findReferences(
     if (!f.uri.startsWith('file:')) continue;
     if (f.parsed.headersOnly && !settings.referencesIncludeGenerated) continue;
     if (!settings.referencesIncludeGenerated && isGeneratedPath(uriToPath(f.uri))) continue;
+    if (!settings.referencesIncludeMocks && isMockPath(uriToPath(f.uri))) continue;
     files.push(f);
   }
 

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "PowerShell(\\(Get-Content package.json -Raw | ConvertFrom-Json\\).dependencies; cd ..\\\\Asistente-vfp; git status --short; Get-Content .gitignore)"
     ]
   }
 }

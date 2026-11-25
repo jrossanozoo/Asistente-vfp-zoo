@@ -11,7 +11,7 @@ import { reclassifyNoteDiagnostics, zooCodeActions, zooDiagnostics } from './dia
 import { ZooStringResolver, ZooTypeResolver } from './inference/typeInference';
 import { productLabel } from './organic/factoryResolver';
 import { makeLocator, readSymbolsFile, symbolsToEntries } from './layers/symbolsReader';
-import { isGeneratedPath, ZooState } from './state';
+import { isGeneratedPath, isMockPath, ZooState } from './state';
 import { vcxContent, vcxEntries } from './vcx/vcxReader';
 import { detectSolution, solutionRoots, sourceFolders, sourceLayer, symbolsLayer } from './workspace/solution';
 
@@ -125,6 +125,13 @@ export function createZooPlugin(): ZooPluginHandle {
       const mode = S(api).settings.indexGenerated;
       if (mode === 'none') return { skip: true };
       return { headersOnly: mode === 'headers' };
+    },
+
+    excludeHeuristic(uri, api) {
+      if (!uri.startsWith('file:')) return false;
+      const s = S(api).settings;
+      const p = uriToPath(uri);
+      return (!s.referencesIncludeMocks && isMockPath(p)) || (!s.referencesIncludeGenerated && isGeneratedPath(p));
     },
 
     async afterIndex(api) {

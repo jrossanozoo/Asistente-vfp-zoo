@@ -20,6 +20,13 @@ export function isGeneratedPath(p: string): boolean {
   return GENERATED_RE.test(p);
 }
 
+const MOCKS_RE = /[\\/]organic\.mocks[\\/]/i;
+
+/** Mocks generados para tests (`Organic.Mocks/Generados/Mock_*.prg`). */
+export function isMockPath(p: string): boolean {
+  return MOCKS_RE.test(p);
+}
+
 /** Estado compartido del plugin zoo. */
 export class ZooState {
   settings: ZooSettings = readZooSettings(undefined);

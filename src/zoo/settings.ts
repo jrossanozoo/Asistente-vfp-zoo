@@ -14,6 +14,7 @@ export interface ZooSettings {
   vcxEnabled: boolean;
   codeLens: boolean;
   referencesIncludeGenerated: boolean;
+  referencesIncludeMocks: boolean;
   referencesIncludeHeuristic: boolean;
   noteCategories: string[];
   noteRequireCategory: boolean;
@@ -56,6 +57,7 @@ export function readZooSettings(raw: Record<string, unknown> | undefined): ZooSe
     vcxEnabled: get('vcx.enabled', true),
     codeLens: get('codeLens.enabled', true),
     referencesIncludeGenerated: get('references.includeGenerated', false),
+    referencesIncludeMocks: get('references.includeMocks', false),
     referencesIncludeHeuristic: get('references.includeHeuristic', true),
     noteCategories: get('note.categories', DEFAULT_NOTE_CATEGORIES),
     noteRequireCategory: get('note.requireCategory', true),

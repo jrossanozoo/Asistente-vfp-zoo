@@ -11,6 +11,7 @@ Implementa la especificación `especificacion-extension-vscode-navegacion-vfp.md
 | Id | Funcionalidad | Detalle |
 |---|---|---|
 | F1 | **Go to Definition** | Todo lo de la genérica, más los literales de fábrica (`InstanciarEntidad("Cliente")` abre `EntColoryTalle_Cliente`, `Ent_Cliente` y `Din_EntidadCliente` en *peek*, en orden de precedencia), `LoadReference("Clase", "Organic.X.app")` y los miembros de `goServicios.X`, `go*` y `_screen.zoo(.app)`. |
+| F1b | **Go to Type Definition** | Sobre una variable, propiedad o cadena `a.b.c` abre la **clase** del tipo deducido (el mismo que usa la completion): `this.oX` asignada desde una fábrica (también en el `Init` de una clase padre), `loX`, `goServicios`, `goServicios.X`, globales `go*` (incluidas `goMensajes`/`goLibrerias`, que salen de su servicio), `_screen.zoo(.app)` y `this`. Si hay varias candidatas por producto, las muestra en *peek* en orden de precedencia. Si el tipo no se deduce, no devuelve nada. F12 sobre una global `go*` sin declaración también va a la clase. |
 | F2 | **Go to Implementation** | Subclases y overrides en todas las capas y en los repos consumidores (`zoo.downstreamRoots`). |
 | F3 | **Find References** | `AS Clase`, `DEFINE CLASS … AS`, literales de fábrica que resuelven a la clase y llamadas `x.Metodo(` con receptor de la jerarquía. Las referencias heurísticas (receptor desconocido) van al final. `Organic.Generated` queda afuera salvo con `zoo.references.includeGenerated`. |
 | F4 | **Hover** | Firma, `NOTE`, jerarquía, procedencia (`Organic.Core.app · símbolos v2.5 · sin fuente local`) y, en los literales de fábrica, la **tabla por producto**. |
@@ -84,7 +85,8 @@ Diagnósticos del framework:
 | `zoo.factories` | `[]` | Reglas de fábrica extra (mismo formato que `src/zoo/organic/factoryRules.ts`). |
 | `zoo.symbols.enabled` / `zoo.stubs.enabled` / `zoo.vcx.enabled` | `true` | Capas T3, T4 y VCX. |
 | `zoo.codeLens.enabled` | `true` | CodeLens. |
-| `zoo.references.includeGenerated` / `includeHeuristic` | `false` / `true` | Alcance de *Find References*. |
+| `zoo.references.includeGenerated` / `includeHeuristic` | `false` / `true` | Alcance de *Find References*. `includeGenerated` también aplica a los resultados heurísticos de F12. |
+| `zoo.references.includeMocks` | `false` | Incluir `Organic.Mocks` en *Find References* y en los resultados heurísticos de F12 (receptor de tipo desconocido). |
 | `zoo.note.categories` | Dependencia, Extension, Generacion, Contrato, Gotcha, Obsoleto | Categorías válidas. |
 | `zoo.note.requireCategory` / `requireOnPublicMethods` / `checkAscii` | `true` / `false` / `true` | N1, N6, N5. |
 | `zoo.diagnostics.unreachableProductClass` / `factoryLiteral` / `ofLib` | `true` | D3, D4, D5. |

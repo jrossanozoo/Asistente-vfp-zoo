@@ -10,6 +10,7 @@ import {
   readPrgSync,
   signatureHelp,
   toLspDiagnostic,
+  typeDefinitionLocations,
 } from 'asistente-vfp-core';
 import type { CursorContext } from 'asistente-vfp-core';
 import { createHeadless, Headless } from '../src/zoo/headless';
@@ -180,6 +181,78 @@ describe('inferencia, completion y signature help (F8/F9)', () => {
     const nat = signatureHelp(dragon.index, dragon.resolver, ctxAt(dragon, rel, '"a",  )', 6), dragon.zoo.plugin.signatureFallback)!;
     expect(nat.signatures[0].label).toMatch(/^STRTRAN\(/);
     expect(nat.activeParameter).toBe(2);
+  });
+});
+
+describe('Go to Type Definition, globales go* y mocks (R1/R2/R3)', () => {
+  const rel = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/UsoMensajes.prg';
+  const at = (needle: string, delta: number, r = rel) => ctxAt(dragon, r, needle, delta);
+  const names = (locs: { uri: string }[]) => locs.map((l) => path.basename(l.uri));
+  const f12 = (needle: string, delta: number, r = rel) => {
+    const ctx = at(needle, delta, r);
+    return definitionWithLocals(dragon.resolver.resolveAt(ctx), ctx);
+  };
+  const typeDef = (needle: string, delta: number, r = rel) => {
+    const ctx = at(needle, delta, r);
+    return names(typeDefinitionLocations(dragon.index, dragon.resolver.typeAt(ctx), ctx));
+  };
+
+  it('tabla de globales: goMensajes y goLibrerias salen de su servicio', () => {
+    const svc = dragon.zoo.state()!.services;
+    expect(svc.globals.find((g) => g.global === 'goMensajes')).toMatchObject({ appProp: 'oMensajes', service: 'Mensajes' });
+    expect(svc.globals.find((g) => g.global === 'goLibrerias')).toBeUndefined(); // no hay servicio Librerias en la fixture
+  });
+
+  it('this.oMensajes (asignada con _Screen.Zoo.CrearObjeto): F12 → propiedad, Type Definition → Mensajes', () => {
+    const decl = f12('this.oMensajes.Advertir', 'this.o'.length);
+    expect(names(decl)).toEqual(['UsoMensajes.prg']);
+    expect(decl[0].range.start.line).toBe(1);
+    expect(typeDef('this.oMensajes.Advertir', 'this.o'.length)).toEqual(['mensajes.prg']);
+  });
+
+  it('this.oMensajes asignada en el Init de la clase padre (otro archivo) → Mensajes', () => {
+    const hija = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/Ventas/UsoMensajesHija.prg';
+    expect(typeDef('this.oMensajes.Advertir', 'this.o'.length, hija)).toEqual(['mensajes.prg']);
+    const adv = dragon.resolver.resolveAt(at('Advertir( "y"', 2, hija))!;
+    expect(adv.heuristic).toBeFalsy();
+    expect(adv.members![0].owner!.decl.name).toBe('Mensajes');
+  });
+
+  it('goServicios.Mensajes: F12 → propiedad, Type Definition → ColorYTalle_Mensajes y Mensajes (precedencia por producto)', () => {
+    expect(names(f12('goServicios.Mensajes.', 'goServicios.M'.length))).toEqual(['serviciosaplicacion.PRG']);
+    expect(typeDef('goServicios.Mensajes.', 'goServicios.M'.length)).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+  });
+
+  it('goMensajes (sin declaración en la fuente): F12 y Type Definition → la clase', () => {
+    expect(names(f12('goMensajes.', 2))).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+    expect(typeDef('goMensajes.', 2)).toEqual(['colorytalle_mensajes.prg', 'mensajes.prg']);
+  });
+
+  it('F12 sobre Advertir en las tres formas → solo Mensajes.Advertir', () => {
+    for (const needle of ['this.oMensajes.Advertir', 'goServicios.Mensajes.Advertir', 'goMensajes.Advertir']) {
+      const locs = f12(needle, needle.length - 3);
+      expect(names(locs), needle).toEqual(['mensajes.prg']);
+    }
+  });
+
+  it('receptor desconocido: la búsqueda por nombre excluye Organic.Mocks salvo con includeMocks', () => {
+    const settings = dragon.zoo.state()!.settings;
+    expect(names(f12('loNada.Advertir', 'loNada.A'.length))).toEqual(['mensajes.prg']);
+    settings.referencesIncludeMocks = true;
+    try {
+      expect(names(f12('loNada.Advertir', 'loNada.A'.length))).toContain('Mock_Mensajes.prg');
+    } finally {
+      settings.referencesIncludeMocks = false;
+    }
+  });
+
+  it('Type Definition: local AS, this, _screen.zoo(.app) y tipo no deducible', () => {
+    expect(typeDef('loForm.Probar', 2)).toEqual(['UsoMensajes.prg']);
+    expect(typeDef('this.Probar()', 2)).toEqual(['UsoMensajes.prg']);
+    expect(typeDef('_screen.zoo.app', '_screen.z'.length)).toEqual(['zoo.prg']);
+    expect(typeDef('_screen.zoo.app', '_screen.zoo.a'.length)).toEqual(['aplicacioncolorytalle.prg', 'aplicacionbase.prg']);
+    expect(typeDef('loNada.Advertir', 2)).toEqual([]);
+    expect(typeDef('"Mensajes"', 2)).toEqual(['mensajes.prg']);
   });
 });
 

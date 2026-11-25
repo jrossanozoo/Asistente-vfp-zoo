@@ -2,7 +2,7 @@
   "name": "asistente-vfp-zoo",
   "displayName": "Asistente VFP Zoo",
   "description": "Navegación semántica y ayuda contextual para Visual FoxPro Organic: productos, fábricas, multi-repo (.symbols, stubs), VCX y docstrings NOTE.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "local",
   "license": "MIT",
   "engines": {
@@ -156,7 +156,12 @@
         "zoo.references.includeGenerated": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Buscar referencias también en `Organic.Generated` (más lento)."
+          "markdownDescription": "Buscar referencias también en `Organic.Generated` (más lento). También aplica a los resultados heurísticos de *Go to Definition*."
+        },
+        "zoo.references.includeMocks": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Incluir `Organic.Mocks` (mocks generados para tests) en *Find References* y en los resultados heurísticos de *Go to Definition*."
         },
         "zoo.references.includeHeuristic": {
           "type": "boolean",

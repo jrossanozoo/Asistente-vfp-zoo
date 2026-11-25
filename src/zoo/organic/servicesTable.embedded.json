@@ -187,6 +187,18 @@
       "global": "goRegistry",
       "appProp": "oRegistry",
       "x": "din_registros"
+    },
+    {
+      "global": "goMensajes",
+      "appProp": "oMensajes",
+      "x": "Mensajes",
+      "service": "Mensajes"
+    },
+    {
+      "global": "goLibrerias",
+      "appProp": "oLibrerias",
+      "x": "Librerias",
+      "service": "Librerias"
     }
   ]
 }
