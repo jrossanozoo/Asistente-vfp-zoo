@@ -24,6 +24,7 @@ Implementa la especificación `especificacion-extension-vscode-navegacion-vfp.md
 | F10 | **Inlay Hints** | Tipo deducido al final del lado izquierdo de una asignación: `this.oMensajes‹: Mensajes› = _Screen.zoo.CrearObjeto("Mensajes")`, `loEnt‹: EntColoryTalle_Cliente›`, `.oX` dentro de `with this`. Con clic se va a la clase; si hay varias candidatas por producto, muestra `+N`. Opcional: nombre del parámetro antes de cada argumento (`zoo.inlayHints.parameterNames`). Solo para el rango visible y nunca con tipos heurísticos. |
 | F11 | **Document Highlight** | Al poner el cursor sobre un símbolo, resalta sus usos en el archivo, separando escritura (asignación) de lectura. Mismo criterio que *Find References*: `Advertir` sobre un receptor `Mensajes` no resalta cualquier `Advertir`. Las locales se resaltan solo dentro de su método. |
 | F12 | **Call Hierarchy** (Shift+Alt+H) | Llamadas entrantes: referencias exactas agrupadas por método, más los `dodefault()` de los overrides. Llamadas salientes: cada llamada del método resuelta sin heurística (sin funciones nativas). Respeta `includeGenerated` / `includeMocks`. |
+| F13 | **Plantillas Organic** | Al escribir `class`/`define`, `function`, `procedure`, `protected`, `hidden` o `funcnote`, ofrece la plantilla según el contexto, en minúsculas: fuera de una clase, `define class … enddefine` y funciones sueltas en la columna 0; dentro de una clase (aunque todavía falte el `enddefine`), métodos con el separador `*---…` y la indentación de la clase. No aparecen en strings, comentarios, `TEXT … ENDTEXT` ni `#if .f.`. |
 
 ### Inferencia de tipos (§6.5)
 
@@ -41,9 +42,18 @@ Las tablas de servicios se extraen de las fuentes de Core cuando están disponib
 | T4 | Stubs de dovfp (`obj\*\_dovfp_stubs\Organic.X\`) | Si no hay fuente: dan la ubicación navegable de los símbolos de T3. Soportan `* @source ruta:línea` (propuesta 6.6). |
 | VCX | `.vcx` del workspace y de las fuentes | Se abren como vista de solo lectura (`foxpro-vcx:`) con propiedades, objetos y métodos. |
 
-Los duplicados se resuelven por capa (T1 > T2 > T3 > T4) y, dentro de cada capa, por repo: Core > Drawing > Generator > AdnImplant > Feline > vertical. PRG gana sobre VCX.
+Cuando una clase está definida más de una vez, el orden es:
+1. **El mismo archivo** desde el que se resuelve.
+2. **Fuera de los tests.** Desde código de la aplicación, las clases definidas en tests **no se resuelven nunca**. Es de test un archivo dentro de un proyecto con `<OutputType>Test</OutputType>` en su `.vfpproj` (`Organic.Tests.Unit`, `Organic.Tests.Autobuild`), un archivo `test*.prg` / `ztest*.prg` o un mock de `Organic.Mocks`. Los stubs de dovfp no cuentan como tests.
+3. **El archivo homónimo:** `define class Mensajes` en `mensajes.prg` gana a otra `Mensajes` declarada en otro archivo.
+4. **La capa:** T1 > T2 > T3 > T4. Dentro de T1, el **proyecto activo** antes que los proyectos referenciados. Dentro de T2, por repo: Core > Drawing > Generator > AdnImplant > Feline > vertical.
+5. PRG antes que VCX.
 
-`Organic.Generated` se indexa por encabezados (`zoo.indexGenerated: "headers"`). Con `"none"` no se abre ningún generado hasta que hace falta: `Din_X` se busca por el nombre del archivo.
+`Organic.Generated` **no se indexa** por defecto (`zoo.indexGenerated: "none"`): los generados no traen `NOTE` y eran la mayor parte del costo de indexar. Cuando hace falta una clase `Din_X`, se carga por el nombre del archivo, siempre del proyecto activo primero. Si el `Organic.Generated` del proyecto activo está vacío (por ejemplo, Dragonfish antes de `dovfp restore` y un build, que trae los generados del paquete de adncli), el log lo avisa. Con `none`, los generados no aparecen en *Go to Symbol in Workspace* (Ctrl+T), *Find References*, subtipos ni *Call Hierarchy*. Para verlos ahí, usar `"headers"` (solo `define class` / `function`) o `"full"`.
+
+### Proyecto activo
+
+Es la carpeta del workspace donde está el `.code-workspace` (la entrada `"path": "."`). Las demás carpetas son proyectos referenciados. Sin `.code-workspace` es la carpeta abierta. Si ninguna carpeta coincide, se toma la primera y el log lo indica. El proyecto activo manda aunque se navegue dentro de un archivo de otro proyecto: por ejemplo, F12 en un `dodefault()` de `ent_cliente.prg` de Feline, abierto desde el workspace de Dragonfish, va al `Din_EntidadCliente` de Dragonfish.
 
 ### Producto activo
 
@@ -74,10 +84,15 @@ Diagnósticos del framework:
 | D3 | info | Clase de producto (`{P}_X`) que ninguna fábrica por producto alcanza, mientras sí hay `CrearObjeto("X")`. Lista las llamadas como información relacionada (por ejemplo `colorytalle_colaboradorCheques`). |
 | D4 | warning | Literal de fábrica sin ninguna clase candidata en el índice. |
 | D5 | warning | `OF lib.prg` que no coincide con el archivo real de la clase padre. |
+| `argTypeMismatch` | warning | El tipo de un argumento no coincide con el `AS` del parámetro: *"Tipo incorrecto: se esperaba Character y se recibió Numeric"*. Solo con tipos inequívocos (literales `"…"`, `'…'`, `[…]`, números, `.T.`/`.F.`, fechas `{^…}`, y variables o parámetros con `AS` del método) y llamadas resueltas sin heurística. Los numéricos son compatibles entre sí, `Date` con `DateTime` y `Character` con `String`/`Memo`/`Varchar`. `.NULL.` y los parámetros sin `AS` o `Variant` aceptan cualquier cosa. Un parámetro de clase acepta cualquier objeto. Un `AS` con un tipo desconocido (por ejemplo, un error de tipeo) no se valida. |
 
 > **Otras extensiones FoxPro:** si hay otra extensión con IntelliSense para FoxPro activa (por ejemplo
 > `zoologic.vfp-intellisense`), VS Code mezcla sus resultados con los de esta y aparecen duplicados en
 > F12, hover y completion. Conviene desactivarla mientras se usa esta.
+>
+> **Snippets de zoo-tool-kit:** sus snippets `vfpClass`, `function` y `vfpFunction` compiten con las plantillas
+> Organic (F13). Hasta que se corrijan, se pueden ocultar desde **Snippets: Insert Snippet** (ícono del ojo en
+> cada snippet).
 
 ## Configuración
 
@@ -88,7 +103,7 @@ Diagnósticos del framework:
 | `zoo.sourceRoots` | `{}` | `{ "Organic.Core": "../Organic.Core" }`. |
 | `zoo.autoSourceRoots` | `true` | Buscar `../Organic.X` si no está configurado. |
 | `zoo.downstreamRoots` | `[]` | Repos consumidores (implementaciones, referencias, tabla por producto). |
-| `zoo.indexGenerated` | `"headers"` | `none` / `headers` / `full`. |
+| `zoo.indexGenerated` | `"none"` | `none` (carga por nombre, bajo demanda) / `headers` / `full`. |
 | `zoo.factories` | `[]` | Reglas de fábrica extra (mismo formato que `src/zoo/organic/factoryRules.ts`). |
 | `zoo.symbols.enabled` / `zoo.stubs.enabled` / `zoo.vcx.enabled` | `true` | Capas T3, T4 y VCX. |
 | `zoo.codeLens.enabled` | `true` | CodeLens. |
@@ -98,6 +113,7 @@ Diagnósticos del framework:
 | `zoo.note.categories` | Dependencia, Extension, Generacion, Contrato, Gotcha, Obsoleto | Categorías válidas. |
 | `zoo.note.requireCategory` / `requireOnPublicMethods` / `checkAscii` | `true` / `false` / `true` | N1, N6, N5. |
 | `zoo.diagnostics.unreachableProductClass` / `factoryLiteral` / `ofLib` | `true` | D3, D4, D5. |
+| `zoo.diagnostics.argumentTypes` | `true` | `argTypeMismatch` (tipo de argumento frente al `AS` del parámetro). |
 | `zoo.exclude`, `zoo.index.maxFileSizeKB`, `zoo.docstring.fallbackComments`, `zoo.features.documentSymbols` | | Igual que en la genérica. |
 
 Ejemplo para Drawing, viendo los overrides de los productos:
@@ -116,8 +132,10 @@ Comandos: **Reindexar workspace**, **Elegir producto**, **Mostrar estado del ín
 
 ```bash
 node dist/mcp.js --root c:\LinceV3\Organic.Dragonfish [--producto ColoryTalle] \
-     [--downstream ../Organic.ZL] [--source-root Organic.Core=../Organic.Core] [--generated headers]
+     [--downstream ../Organic.ZL] [--source-root Organic.Core=../Organic.Core] [--generated none|headers|full]
 ```
+
+Con varias `--root`, la primera es el proyecto activo. `--generated` es `none` por defecto, igual que la extensión.
 
 ```bash
 claude mcp add organic -- node <ruta>\dist\mcp.js --root c:\LinceV3\Organic.Dragonfish
@@ -131,7 +149,18 @@ claude mcp add organic -- node <ruta>\dist\mcp.js --root c:\LinceV3\Organic.Drag
 | `organic_get_doc(simbolo)` | Firma y `NOTE` (o doc heredada) de `Clase`, `Clase.Miembro` o un procedimiento. |
 | `organic_find_class(patron)` | Clases por parte del nombre. |
 
-Indexar Dragonfish con sus cinco repos hermanos (~17.000 archivos) tarda ~25–35 s la primera vez. Las siguientes usan la cache de `%TEMP%\asistente-vfp-zoo` y arrancan en ~3–7 s, con ~0,7–0,9 GB de memoria.
+### Tiempos de indexación
+
+Medidos el 27/11/2026 con la configuración por defecto (`indexGenerated: "none"`), en la extensión y en el MCP:
+
+| | Feline (15.733 `.prg`) | Dragonfish con sus cinco repos hermanos (23.640 `.prg`) |
+|---|---|---|
+| Primera vez | ~27 s | ~27 s |
+| Con cache | ~3,3 s | ~3,7 s |
+| Cache en disco | ~156 MB | ~170 MB |
+| Memoria | ~0,7 GB | ~0,65–0,8 GB |
+
+La cache guarda el parseo de cada archivo (por fecha y tamaño), así que después de un cambio de rama o un pull solo se reparsean los archivos que cambiaron. La extensión la guarda en el almacenamiento del workspace de VS Code y el MCP en `%TEMP%\asistente-vfp-zoo`. Con `indexGenerated: "headers"`, la primera vez de Dragonfish tarda ~77 s y usa ~1,3 GB.
 
 ## Desarrollo
 

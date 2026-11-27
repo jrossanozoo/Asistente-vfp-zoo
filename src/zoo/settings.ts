@@ -52,7 +52,8 @@ export function readZooSettings(raw: Record<string, unknown> | undefined): ZooSe
     sourceRoots: get('sourceRoots', {}),
     autoSourceRoots: get('autoSourceRoots', true),
     downstreamRoots: get('downstreamRoots', []),
-    indexGenerated: get('indexGenerated', 'headers'),
+    // `none` por defecto: los generados no traen documentación y son la mayor parte del costo de indexar.
+    indexGenerated: get('indexGenerated', 'none'),
     factories: get('factories', []),
     symbolsEnabled: get('symbols.enabled', true),
     stubsEnabled: get('stubs.enabled', true),

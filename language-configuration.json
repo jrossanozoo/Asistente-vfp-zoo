@@ -11,7 +11,13 @@
   "surroundingPairs": [["(", ")"], ["[", "]"], ["\"", "\""], ["'", "'"]],
   "wordPattern": "[A-Za-z_][A-Za-z0-9_]*",
   "indentationRules": {
-    "increaseIndentPattern": "^\s*(?i:(define\s+class|(protected\s+|hidden\s+)?(function|procedure)|if|else|do\s+case|case|otherwise|for|do\s+while|scan|with|try|catch|finally|text))\b.*$",
-    "decreaseIndentPattern": "^\s*(?i:(enddefine|endfunc|endproc|endif|else|endcase|case|otherwise|endfor|next|enddo|endscan|endwith|catch|finally|endtry|endtext))\b.*$"
+    "increaseIndentPattern": {
+      "pattern": "^\\s*(define\\s+class|((protected|hidden)\\s+)?(function|procedure)|if|else|do\\s+case|case|otherwise|for|do\\s+while|scan|with|try|catch|finally|text)\\b(?!\\s*=).*$",
+      "flags": "i"
+    },
+    "decreaseIndentPattern": {
+      "pattern": "^\\s*(enddefine|endfunc|endproc|endif|else|endcase|case|otherwise|endfor|next|enddo|endscan|endwith|catch|finally|endtry|endtext)\\b.*$",
+      "flags": "i"
+    }
   }
 }

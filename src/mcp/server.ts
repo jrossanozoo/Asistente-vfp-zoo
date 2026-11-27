@@ -2,7 +2,7 @@
  * Servidor MCP (stdio) sobre el índice de Asistente VFP Zoo.
  *
  *   node dist/mcp.js --root c:\LinceV3\Organic.Dragonfish [--producto ColoryTalle]
- *        [--downstream ../Organic.ZL] [--source-root Organic.Core=../Organic.Core] [--generated headers]
+ *        [--downstream ../Organic.ZL] [--source-root Organic.Core=../Organic.Core] [--generated none|headers|full]
  *
  * Herramientas: organic_resolve_factory, organic_class_hierarchy, organic_find_overrides, organic_get_doc, organic_find_class.
  */
@@ -24,7 +24,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { roots: [], producto: null, downstream: [], sourceRoots: {}, generated: 'headers' };
+  const a: Args = { roots: [], producto: null, downstream: [], sourceRoots: {}, generated: 'none' };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i + 1];
     switch (argv[i]) {

@@ -2,7 +2,7 @@
   "name": "asistente-vfp-zoo",
   "displayName": "Asistente VFP Zoo",
   "description": "Navegación semántica y ayuda contextual para Visual FoxPro Organic: productos, fábricas, multi-repo (.symbols, stubs), VCX y docstrings NOTE.",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "publisher": "local",
   "license": "MIT",
   "engines": {
@@ -125,8 +125,8 @@
             "headers",
             "full"
           ],
-          "default": "headers",
-          "markdownDescription": "Cómo indexar `Organic.Generated`: `none` (solo por nombre de archivo, bajo demanda), `headers` (`define class` / `function`), `full`."
+          "default": "none",
+          "markdownDescription": "Cómo indexar `Organic.Generated`: `none` (no se indexan; una clase generada se carga por nombre de archivo cuando se la necesita, siempre del proyecto activo), `headers` (`define class` / `function`) o `full`. Con `none` el primer indexado es ~2,5 veces más rápido y usa ~40 % menos memoria, pero los generados no aparecen en *Go to Symbol in Workspace* (Ctrl+T), *Find References*, subtipos ni *Call Hierarchy*."
         },
         "zoo.factories": {
           "type": "array",
@@ -222,6 +222,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "D5: `OF lib.prg` que no coincide con el archivo real de la clase padre."
+        },
+        "zoo.diagnostics.argumentTypes": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Advertir cuando un argumento no coincide con el `AS` del parámetro (literales y variables con `AS` del método; solo llamadas resueltas sin heurística). Código `argTypeMismatch`."
         },
         "zoo.exclude": {
           "type": "array",

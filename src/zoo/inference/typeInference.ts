@@ -116,7 +116,8 @@ export class ZooTypeResolver implements TypeResolver {
       const m = re.exec(s.code);
       if (!m) continue;
       if (line === ctx.position.line && ctx.position.character > m[0].length - m[1].length - 1) continue;
-      return this.rhsType(m[1], ctx, api);
+      // El lado derecho ve las asignaciones anteriores: `loX = loX.Metodo()` usa el loX de antes.
+      return this.rhsType(m[1], { ...ctx, position: { line: line - 1, character: 0 } }, api);
     }
     return undefined;
   }

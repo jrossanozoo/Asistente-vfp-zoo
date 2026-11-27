@@ -1,6 +1,7 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import fg from 'fast-glob';
-import { normalizePath, parsePrg, pathToUri, readPrgSync, unquote } from 'asistente-vfp-core';
+import { normalizePath, parsePrg, pathToUri, readPrgSync, unquote, uriToPath } from 'asistente-vfp-core';
 import type { CallSite, FileEntry, HostApi, LayerInfo } from 'asistente-vfp-core';
 import { DEFAULT_FACTORY_RULES, NAMING_RULES } from './organic/factoryRules';
 import { FactoryResolution, FactoryResolver, FactoryRule } from './organic/factoryResolver';
@@ -27,6 +28,35 @@ export function isMockPath(p: string): boolean {
   return MOCKS_RE.test(p);
 }
 
+/** Archivos de test por nombre: `test*.prg` / `ztest*.prg`. */
+const TEST_NAME_RE = /^z?test/i;
+/** Stubs de dovfp: viven dentro del proyecto de tests (`obj\Test\_dovfp_stubs`) pero son clases de la aplicación. */
+const STUBS_RE = /[\\/]_dovfp_stubs[\\/]/i;
+const TEST_OUTPUT_RE = /<OutputType>\s*Test\s*<\/OutputType>/i;
+
+/** Carpetas de los proyectos de tests (`.vfpproj` con `<OutputType>Test</OutputType>`) bajo las raíces dadas. */
+export async function findTestFolders(roots: string[]): Promise<string[]> {
+  const out = new Set<string>();
+  for (const root of roots) {
+    const projs = await fg('**/*.vfpproj', {
+      cwd: root,
+      deep: 2,
+      caseSensitiveMatch: false,
+      ignore: ['**/bin/**', '**/obj/**', '**/node_modules/**', '**/.git/**'],
+      suppressErrors: true,
+    });
+    for (const rel of projs) {
+      const full = path.join(root, rel);
+      try {
+        if (TEST_OUTPUT_RE.test(fs.readFileSync(full, 'utf8'))) out.add(normalizePath(path.dirname(full)));
+      } catch {
+        // proyecto ilegible: no cuenta como test
+      }
+    }
+  }
+  return [...out];
+}
+
 /** Estado compartido del plugin zoo. */
 export class ZooState {
   settings: ZooSettings = readZooSettings(undefined);
@@ -35,6 +65,9 @@ export class ZooState {
   readonly factories: FactoryResolver;
   /** Generados por nombre de archivo (modo `none`). */
   generatedFiles = new Map<string, { path: string; layer: LayerInfo }>();
+  /** Carpetas de proyectos de tests (normalizadas). */
+  private testFolders: string[] = [];
+  private testCache = new Map<string, boolean>();
   private productCache: { version: number; value: string } | undefined;
   private callCache: { version: number; byLiteral: Map<string, IndexedCall[]> } | undefined;
 
@@ -137,6 +170,39 @@ export class ZooState {
         if (!this.generatedFiles.has(key)) this.generatedFiles.set(key, { path: normalizePath(f), layer: r.layer });
       }
     }
+  }
+
+  setTestFolders(folders: string[]): void {
+    this.testFolders = folders.map((f) => normalizePath(f).toLowerCase() + path.sep);
+    this.testCache.clear();
+  }
+
+  /**
+   * Archivo de test: dentro de un proyecto de tests, con nombre `test*` / `ztest*`, o un mock (`Organic.Mocks`).
+   * Los stubs de dovfp nunca son de test.
+   */
+  isTestUri(uri: string): boolean {
+    let v = this.testCache.get(uri);
+    if (v === undefined) {
+      v = false;
+      if (uri.startsWith('file:')) {
+        const p = uriToPath(uri);
+        if (!STUBS_RE.test(p)) {
+          const lower = p.toLowerCase();
+          v = isMockPath(p) || TEST_NAME_RE.test(path.basename(p)) || this.testFolders.some((f) => lower.startsWith(f));
+        }
+      }
+      this.testCache.set(uri, v);
+    }
+    return v;
+  }
+
+  /** Generados del mapa que están bajo `folder` (modo `none`). */
+  generatedCount(folder: string): number {
+    const prefix = normalizePath(folder).toLowerCase() + path.sep;
+    let n = 0;
+    for (const g of this.generatedFiles.values()) if (g.path.toLowerCase().startsWith(prefix)) n++;
+    return n;
   }
 
   /** Carga perezosa (modo `none`): la clase X está en X.prg. */

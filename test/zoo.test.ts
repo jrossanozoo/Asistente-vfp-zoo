@@ -1,6 +1,8 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  activeFolderIndex,
   buildCursorContext,
   declarationLocations,
   definitionWithLocals,
@@ -13,13 +15,14 @@ import {
   toLspDiagnostic,
   typeDefinitionLocations,
   typedObjectSection,
+  uriToPath,
 } from 'asistente-vfp-core';
 import { inlayHints } from '../src/zoo/features/inlayHints';
 import { documentHighlights } from '../src/zoo/features/documentHighlight';
 import { incomingCalls, outgoingCalls, prepareCallHierarchy } from '../src/zoo/features/callHierarchy';
 import type { CursorContext } from 'asistente-vfp-core';
 import { createHeadless, Headless } from '../src/zoo/headless';
-import { memberCompletion, factoryLiteralCompletion } from '../src/zoo/features/completion';
+import { memberCompletion, factoryLiteralCompletion, templateCompletion } from '../src/zoo/features/completion';
 import { findReferences } from '../src/zoo/features/references';
 import { codeLenses } from '../src/zoo/features/codeLens';
 import { reclassifyNoteDiagnostics, zooCodeActions, zooDiagnostics } from '../src/zoo/diagnostics/zooDiagnostics';
@@ -61,6 +64,172 @@ beforeAll(async () => {
     createHeadless({ roots: [abs('FelineSinCore')], zoo: { autoSourceRoots: false } }),
   ]);
 }, 60_000);
+
+describe('H4: proyecto activo', () => {
+  const entCliente = 'Organic.Feline/Organic.BusinessLogic/CENTRALSS/Felino/altas/ent_cliente.prg';
+  const dinDe = (h: Headless) => {
+    const target = h.resolver.resolveAt(ctxAt(h, entCliente, 'dodefault()', 2))!;
+    const m = target.members?.[0];
+    expect(m?.owner?.decl.name).toBe('Din_EntidadCliente');
+    return path.relative(ROOT, uriToPath(m!.decl.uri)).split(path.sep)[0];
+  };
+
+  it('activeFolderIndex: la carpeta del .code-workspace, si no la primera', () => {
+    const folders = ['c:\\LinceV3\\Organic.Feline', 'c:\\LinceV3\\Organic.Dragonfish'];
+    expect(activeFolderIndex(folders, 'C:\\LinceV3\\Organic.Dragonfish\\settings.dragonfish.code-workspace').index).toBe(1);
+    expect(activeFolderIndex(folders, undefined)).toEqual({ index: 0 });
+    const otro = activeFolderIndex(folders, 'c:\\otro\\x.code-workspace');
+    expect(otro.index).toBe(0);
+    expect(otro.note).toContain('Organic.Feline');
+  });
+
+  for (const mode of ['none', 'headers'] as const) {
+    it(`F12 en dodefault() de Feline va al Din_* del proyecto activo (indexGenerated ${mode})`, async () => {
+      const zoo = { indexGenerated: mode };
+      const [dfActivo, felActivo] = await Promise.all([
+        createHeadless({ roots: [abs('Organic.Dragonfish'), abs('Organic.Feline')], zoo }),
+        createHeadless({ roots: [abs('Organic.Feline'), abs('Organic.Dragonfish')], zoo }),
+      ]);
+      expect(dinDe(dfActivo)).toBe('Organic.Dragonfish');
+      expect(dinDe(felActivo)).toBe('Organic.Feline');
+    }, 60_000);
+  }
+
+  it('workspace con solo Dragonfish: el Din_* local gana al de las fuentes de Feline', () => {
+    expect(dinDe(dragon)).toBe('Organic.Dragonfish');
+  });
+});
+
+describe('H1: archivo homónimo y clases de test', () => {
+  const uso = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/UsoTests.prg';
+  const ayudantes = 'Organic.Dragonfish/Organic.Tests.Unit/ayudantes.prg';
+  const f12 = (rel: string, needle: string, delta: number) => {
+    const ctx = ctxAt(dragon, rel, needle, delta);
+    return definitionWithLocals(dragon.resolver.resolveAt(ctx), ctx).map((l) => path.basename(uriToPath(l.uri)));
+  };
+
+  it('detecta los archivos de test: proyecto Test, nombre test*/ztest*, mocks; los stubs no', () => {
+    const st = dragon.zoo.state()!;
+    expect(st.isTestUri(pathToUri(abs(ayudantes)))).toBe(true);
+    expect(st.isTestUri(pathToUri(abs('Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/ztestAyuda.prg')))).toBe(true);
+    expect(st.isTestUri(pathToUri(abs('Organic.Dragonfish/Organic.Mocks/Generados/Mock_Mensajes.prg')))).toBe(true);
+    expect(st.isTestUri(pathToUri(abs(uso)))).toBe(false);
+    expect(st.isTestUri(pathToUri(abs('FelineSinCore/Organic.Tests.Unit/obj/Test/_dovfp_stubs/Organic.Core/mensajes.prg')))).toBe(false);
+  });
+
+  it('desde la aplicación, F12 en una clase va a la definición de la aplicación, no a la del test', () => {
+    expect(f12(uso, 'as Mensajes', 4)).toEqual(['mensajes.prg']);
+    expect(dragon.index.getClass('Mensajes', { fromUri: pathToUri(abs(uso)) })?.decl.uri).not.toContain('Tests.Unit');
+  });
+
+  it('desde la aplicación, una clase que solo está en tests no se resuelve', () => {
+    expect(f12(uso, 'as SoloEnTest', 4)).toEqual([]);
+    expect(dragon.index.classEntries('SoloEnTest', { fromUri: pathToUri(abs(uso)) })).toEqual([]);
+    // Sin origen (Ctrl+T, MCP) sigue existiendo.
+    expect(dragon.index.classEntries('SoloEnTest')).toHaveLength(1);
+  });
+
+  it('desde el propio test se ve su clase', () => {
+    expect(f12(ayudantes, 'as Mensajes', 4)).toEqual(['ayudantes.prg']);
+  });
+
+  it('la clase del archivo homónimo gana aunque otra esté en una capa de mayor prioridad', () => {
+    expect(f12(uso, 'as Planilla', 4)).toEqual(['planilla.prg']);
+  });
+});
+
+describe('H3: indentación y plantillas según el contexto', () => {
+  const rel = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/UsoMensajes.prg';
+  /** `|` marca el cursor. */
+  const tpl = (src: string) => {
+    const text = src.replace('|', '');
+    const uri = pathToUri(abs(rel));
+    const ctx = buildCursorContext(uri, text, parsePrg(text, uri, {}), posOf(src, '|'), dragon.index, dragon.index.getFile(uri)!.layer);
+    return templateCompletion(ctx, dragon.zoo.state()!);
+  };
+  const edit = (items: ReturnType<typeof tpl>, label: string) => {
+    const it = items!.find((i) => i.label === label)!;
+    expect(it, label).toBeDefined();
+    const te = it.textEdit as { range: { start: { character: number } }; newText: string };
+    expect(te.range.start.character).toBe(0);
+    return te.newText;
+  };
+  const SEP = '*' + '-'.repeat(89);
+
+  it('language-configuration.json es JSON válido y sus patrones indentan lo esperado', () => {
+    const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'language-configuration.json'), 'utf8'));
+    const inc = new RegExp(cfg.indentationRules.increaseIndentPattern.pattern, cfg.indentationRules.increaseIndentPattern.flags);
+    const dec = new RegExp(cfg.indentationRules.decreaseIndentPattern.pattern, cfg.indentationRules.decreaseIndentPattern.flags);
+    for (const l of ['define class X as custom', '\tFUNCTION Algo()', '\tprotected procedure P', 'if llX', 'do case', '\tcase x = 1', 'otherwise', 'try', 'catch to loEx', 'text to lcX noshow', 'with this', 'for each loX in loY'])
+      expect(inc.test(l), l).toBe(true);
+    for (const l of ['iif( llX, 1, 2 )', 'lcX = textmerge( lcY )', 'text = "hola"', 'formato = 1', 'endfunc', 'withdraw()'])
+      expect(inc.test(l), l).toBe(false);
+    for (const l of ['enddefine', '\tendfunc', 'endif', 'else', 'case x', 'otherwise', 'endcase', 'catch', 'endtry', 'endtext', 'endwith'])
+      expect(dec.test(l), l).toBe(true);
+    expect(dec.test('endifx = 1')).toBe(false);
+  });
+
+  it('archivo vacío + class → define class en minúsculas, columna 0', () => {
+    const items = tpl('cla|');
+    expect(items![0].label).toBe('define class (Organic)');
+    expect(items![0].preselect).toBe(true);
+    expect(edit(items, 'define class (Organic)')).toBe('define class ${1:Nombre} as ${2:custom}${3: of ${4:archivo}.prg}\n\n\t$0\n\nenddefine');
+  });
+
+  it('function dentro de una clase sin enddefine → separador y método con un tab, cuerpo con dos', () => {
+    const items = tpl('define class X as custom\n\tfunc|');
+    expect(edit(items, 'function – método (Organic)')).toBe(
+      `\t${SEP}\n\tfunction \${1:Nombre}( \${2:tcParametro} as \${3:String} ) as \${4:Void}\n\t\t$0\n\tendfunc`,
+    );
+    expect(items!.some((i) => i.label === 'define class (Organic)')).toBe(false);
+  });
+
+  it('cursor entre métodos de una clase cerrada → mismo resultado', () => {
+    const items = tpl('define class X as custom\n\tfunction A()\n\tendfunc\n\tfunction|\n\tfunction B()\n\tendfunc\nenddefine\n');
+    expect(edit(items, 'function – método (Organic)')).toContain(`\t${SEP}\n\tfunction `);
+    expect(items!.map((i) => i.label)).toContain('protected function – método (Organic)');
+  });
+
+  it('después de enddefine, function → función en la columna 0 sin separador', () => {
+    const items = tpl('define class X as custom\nenddefine\nfunction|');
+    const text = edit(items, 'function (Organic)');
+    expect(text.startsWith('function ${1:Nombre}')).toBe(true);
+    expect(text).not.toContain(SEP);
+  });
+
+  it('class dentro de una clase → no se ofrece define class', () => {
+    expect(tpl('define class X as custom\n\tclass|')).toBeUndefined();
+  });
+
+  it('comentario &&, comentario *, TEXT…ENDTEXT y #if .f. → sin items', () => {
+    expect(tpl('\t&& func|')).toBeUndefined();
+    expect(tpl('* func|')).toBeUndefined();
+    expect(tpl('text to lcX noshow\nfunc|\nendtext')).toBeUndefined();
+    expect(tpl('lcX = "func|"')).toBeUndefined();
+    expect(tpl('#if .f.\nfunc|\n#endif')).toBeUndefined();
+    expect(tpl('#if .f.\n#else\nfunc|\n#endif')).toBeDefined();
+  });
+
+  it('define class precedido por un NOTE con continuación → dentro de la clase', () => {
+    const items = tpl('NOTE\t[Contrato] Algo. ;\n\t\tdefine class no es esto ;\n\t\tsigue el NOTE.\ndefine class X as custom\n\tfunc|');
+    expect(items!.some((i) => i.label === 'function – método (Organic)')).toBe(true);
+  });
+
+  it('procedure dentro de una clase → procedure/endproc; funcnote con NOTE indentado', () => {
+    const items = tpl('define class X as custom\n\tproc|');
+    const text = edit(items, 'procedure – método (Organic)');
+    expect(text).toContain('\tprocedure ${1:Nombre}');
+    expect(text.endsWith('\tendproc')).toBe(true);
+    const note = edit(tpl('define class X as custom\n\tfuncn|'), 'funcnote – método (Organic)');
+    expect(note).toContain(`\t${SEP}\n\tNOTE\t[\${1|Dependencia,Extension,Generacion,Contrato,Gotcha,Obsoleto|}]`);
+    expect(note.endsWith('\tendfunc')).toBe(true);
+  });
+
+  it('funcnote ya no está en los snippets estáticos', () => {
+    const snippets = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'snippets', 'foxpro.json'), 'utf8'));
+    expect(Object.values(snippets).map((s) => (s as { prefix: string }).prefix)).toEqual(['note', 'notes']);
+  });
+});
 
 describe('workspace y producto', () => {
   it('detecta el producto de la clase Aplicacion* del workspace', () => {
@@ -313,6 +482,41 @@ describe('Etapa 1: hover uniforme, inlay hints, document highlight, call hierarc
     // Solo el rango pedido.
     const one = inlayHints(base, { start: { line: lineOf('loMensajes = _Screen'), character: 0 }, end: { line: lineOf('loMensajes = _Screen'), character: 0 } }, dragon.zoo.state()!, dragon.api);
     expect(one).toHaveLength(1);
+  });
+
+  it('H2: asignaciones cíclicas no desbordan la pila (inlay hints, hover, F12)', () => {
+    const ciclos = 'Organic.Dragonfish/Organic.BusinessLogic/CENTRALSS/ColorYTalle/CiclosDeTipo.prg';
+    const src = readPrgSync(abs(ciclos));
+    const cat = (needle: string, delta: number) => ctxAt(dragon, ciclos, needle, delta);
+    const settings = dragon.zoo.state()!.settings;
+    settings.inlayHintsParameterNames = true;
+    try {
+      const all = inlayHints(cat('define class CiclosDeTipo', 0), { start: { line: 0, character: 0 }, end: { line: 999, character: 0 } }, dragon.zoo.state()!, dragon.api);
+      expect(Array.isArray(all)).toBe(true);
+    } finally {
+      settings.inlayHintsParameterNames = false;
+    }
+    for (const [needle, delta] of [
+      ['this.oA = this.oB', 6],
+      ['this.oX = this.oX', 6],
+      ['.oA = .oA.Otro', 2],
+      ['loX.Advertir( "y"', 5],
+      ['loB.Advertir( "z"', 5],
+      ['\tloY.Algo()', 5],
+      ['this.oA.Advertir', 9],
+      ['this.oX.Advertir', 9],
+    ] as const) {
+      const ctx = cat(needle, delta);
+      expect(() => dragon.resolver.resolveAt(ctx)).not.toThrow();
+      expect(() => dragon.resolver.typeAt(ctx)).not.toThrow();
+    }
+    // El lado derecho de `loX = loX.Advertir(…)` ve el loX anterior (Mensajes), y F12 sobre Advertir llega.
+    expect(src).toContain('loX = loX.Advertir');
+    expect(dragon.resolver.resolveChainType(['loX'], cat('loX = loX.Advertir', 6))?.classNames).toEqual(['Mensajes']);
+    const adv = dragon.resolver.resolveAt(cat('loX = loX.Advertir', 10))!;
+    expect(adv.members?.[0]?.owner?.decl.name).toBe('Mensajes');
+    // Después, loX es lo que devuelve Advertir (sin tipo declarado): no se inventa un tipo.
+    expect(dragon.resolver.resolveChainType(['loX'], cat('loX = loX.Advertir', 0))).toBeUndefined();
   });
 
   it('E1.2: inlay hints de nombre de parámetro solo con la configuración activa y sin heurística', () => {

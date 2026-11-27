@@ -1,11 +1,11 @@
 import fg from 'fast-glob';
 import * as fs from 'fs';
 import * as path from 'path';
-import { normalizePath, pathToUri, uriToPath } from 'asistente-vfp-core';
+import { normalizePath, pathToUri, uriToPath, workspaceLayer } from 'asistente-vfp-core';
 import type { FileEntry, HostApi, LayerInfo, RootSpec, VfpPlugin } from 'asistente-vfp-core';
 import { nativeSignature } from './data/nativeFunctions';
 import { codeLenses } from './features/codeLens';
-import { factoryLiteralCompletion, memberCompletion } from './features/completion';
+import { factoryLiteralCompletion, memberCompletion, templateCompletion } from './features/completion';
 import { findReferences } from './features/references';
 import { documentHighlights } from './features/documentHighlight';
 import { inlayHints } from './features/inlayHints';
@@ -14,7 +14,7 @@ import { reclassifyNoteDiagnostics, zooCodeActions, zooDiagnostics } from './dia
 import { ZooStringResolver, ZooTypeResolver } from './inference/typeInference';
 import { productLabel } from './organic/factoryResolver';
 import { makeLocator, readSymbolsFile, symbolsToEntries } from './layers/symbolsReader';
-import { isGeneratedPath, isMockPath, ZooState } from './state';
+import { findTestFolders, isGeneratedPath, isMockPath, ZooState } from './state';
 import { vcxContent, vcxEntries } from './vcx/vcxReader';
 import { detectSolution, solutionRoots, sourceFolders, sourceLayer, symbolsLayer } from './workspace/solution';
 
@@ -25,15 +25,16 @@ export interface ZooPluginHandle {
   state: () => ZooState | undefined;
 }
 
-const WORKSPACE_LAYER: LayerInfo = { id: 'workspace', label: 'Workspace', priority: 0, role: 'source', quality: 'fuente' };
 
 export function createZooPlugin(): ZooPluginHandle {
   let state: ZooState | undefined;
   const S = (api: HostApi): ZooState => (state ??= new ZooState(api));
 
+  // Una sola instancia: su contador de profundidad tiene que sobrevivir a la reentrada desde el core.
+  let types: ZooTypeResolver | undefined;
   const typeResolver = {
     resolveChain: (chain: string[], ctx: Parameters<ZooTypeResolver['resolveChain']>[1], api: HostApi) =>
-      new ZooTypeResolver(S(api)).resolveChain(chain, ctx, api),
+      (types ??= new ZooTypeResolver(S(api))).resolveChain(chain, ctx, api),
   };
   const stringResolver = {
     resolveString: (call: Parameters<ZooStringResolver['resolveString']>[0], ctx: Parameters<ZooStringResolver['resolveString']>[1], api: HostApi) =>
@@ -144,11 +145,16 @@ export function createZooPlugin(): ZooPluginHandle {
       const st = S(api);
       const s = st.settings;
       const index = api.index;
+      // Tests (H1): la aplicación nunca resuelve clases definidas en tests.
+      const projectRoots = [...api.workspaceRoots(), ...st.solutions.flatMap((sol) => sol.apps.flatMap((a) => (a.sourceRoot ? [a.sourceRoot] : [])))];
+      st.setTestFolders(await findTestFolders(projectRoots));
+      index.isTestUri = (uri) => st.isTestUri(uri);
       // Generados por nombre de archivo (modo none).
       if (s.indexGenerated === 'none') {
-        const genRoots: { path: string; layer: LayerInfo }[] = api.workspaceRoots().map((f) => ({
+        // Proyecto activo primero: ante dos `Din_X.prg` gana el suyo (workspaceRoots lo trae primero).
+        const genRoots: { path: string; layer: LayerInfo }[] = api.workspaceRoots().map((f, i) => ({
           path: path.join(f, 'Organic.Generated'),
-          layer: { ...WORKSPACE_LAYER, label: path.basename(f) },
+          layer: workspaceLayer(f, i),
         }));
         for (const sol of st.solutions) {
           for (const app of sol.apps) {
@@ -157,6 +163,13 @@ export function createZooPlugin(): ZooPluginHandle {
         }
         await st.buildGeneratedMap(genRoots.filter((r) => fs.existsSync(r.path)));
         index.classLoader = (name) => st.loadGenerated(name);
+        const active = genRoots[0];
+        if (active && fs.existsSync(active.path) && st.generatedCount(active.path) === 0) {
+          api.log(
+            `${active.path} no tiene generados (.prg). Las clases Din_* se van a tomar de otros proyectos. ` +
+              'Si vienen del paquete de adncli, ejecutá dovfp restore y un build del proyecto.',
+          );
+        }
       } else {
         index.classLoader = undefined;
       }
@@ -179,7 +192,7 @@ export function createZooPlugin(): ZooPluginHandle {
       applyStubSources(api);
       // VCX del workspace y de las fuentes hermanas.
       if (s.vcxEnabled) {
-        const vcxRoots: { path: string; layer: LayerInfo }[] = api.workspaceRoots().map((f) => ({ path: f, layer: { ...WORKSPACE_LAYER, label: path.basename(f) } }));
+        const vcxRoots: { path: string; layer: LayerInfo }[] = api.workspaceRoots().map((f, i) => ({ path: f, layer: workspaceLayer(f, i) }));
         for (const sol of st.solutions) {
           for (const app of sol.apps) {
             if (app.sourceRoot) for (const folder of sourceFolders(app.sourceRoot)) vcxRoots.push({ path: folder, layer: sourceLayer(app) });
@@ -225,8 +238,11 @@ export function createZooPlugin(): ZooPluginHandle {
       c.onCompletion(async (p) => {
         const ctx = await api.cursorContext(p.textDocument.uri, p.position);
         if (!ctx) return [];
-        const items = factoryLiteralCompletion(ctx, S(api)) ?? memberCompletion(ctx, api) ?? [];
-        return { isIncomplete: false, items };
+        const items = factoryLiteralCompletion(ctx, S(api)) ?? memberCompletion(ctx, api);
+        if (items) return { isIncomplete: false, items };
+        // Plantillas por palabra: incompletas para que se recalculen al seguir escribiendo (eligen la palabra clave).
+        const templates = templateCompletion(ctx, S(api));
+        return { isIncomplete: !!templates, items: templates ?? [] };
       });
       c.onRequest(`${REQUEST_PREFIX}/vcxContent`, (params: { uri: string }) => vcxContent(params.uri) ?? null);
       c.onRequest(`${REQUEST_PREFIX}/products`, () => {

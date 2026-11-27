@@ -1,6 +1,6 @@
 import * as path from 'path';
-import { buildCursorContext, normalizePath, ParseCache, readPrg, Resolver, scanRoots, SymbolIndex, uriToPath } from 'asistente-vfp-core';
-import type { HostApi, LayerInfo, RootSpec, VfpPlugin } from 'asistente-vfp-core';
+import { buildCursorContext, normalizePath, ParseCache, readPrg, Resolver, scanRoots, SymbolIndex, uriToPath, workspaceLayer } from 'asistente-vfp-core';
+import type { HostApi, RootSpec, VfpPlugin } from 'asistente-vfp-core';
 import { createZooPlugin, ZooPluginHandle } from './zooPlugin';
 
 export interface HeadlessOptions {
@@ -51,8 +51,8 @@ export async function createHeadless(opts: HeadlessOptions): Promise<Headless> {
     log,
     reindex: async () => undefined,
   };
-  const workspaceLayer: LayerInfo = { id: 'workspace', label: 'Workspace', priority: 0, role: 'source', quality: 'fuente' };
-  const specs: RootSpec[] = roots.map((r, i) => ({ path: r, layer: { ...workspaceLayer, id: `workspace:${i}`, label: path.basename(r) } }));
+  // La primera raíz es el proyecto activo.
+  const specs: RootSpec[] = roots.map((r, i) => ({ path: r, layer: workspaceLayer(r, i) }));
   specs.push(...(await zoo.plugin.roots!(api)));
   const downstream = (settings.zoo.downstreamRoots as string[] | undefined) ?? [];
   downstream.forEach((d, i) => {

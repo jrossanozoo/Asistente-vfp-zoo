@@ -1,0 +1,6 @@
+<Project>
+	<PropertyGroup>
+		<OutputType>Test</OutputType>
+		<StartupObject>mainTestU.prg</StartupObject>
+	</PropertyGroup>
+</Project>
